@@ -1,0 +1,6 @@
+.pio/
+.vscode/
+config.h
+*.pyc
+__pycache__/
+.DS_Store

@@ -6,7 +6,7 @@ A portable voice-activated dietary assistant for people with FODMAP and gluten r
 
 Safe Bite is a pocket-sized device that helps people make safe food choices. They ask "Can I eat apples?" and instantly see:
 
-```
+```txt
 FODMAP: HIGH 🔴
 GLUTEN: NO 🟢
 ```
@@ -33,11 +33,16 @@ GLUTEN: NO 🟢
 
 I'm documenting the build process. Follow along at [s3rgiosan.dev](https://s3rgiosan.dev).
 
-## License
-
-MIT
-
 ## Acknowledgments
 
 - Inspired by [this LinkedIn post](https://www.linkedin.com/posts/organised_i-made-my-8-year-old-son-who-doesnt-have-ugcPost-7414307168881094656-CRCv/)
 - FODMAP data based on [Monash University guidelines](https://www.monashfodmap.com/)
+
+## Links
+
+- [CH34x USB driver for macOS](https://github.com/WCHSoftGroup/ch34xser_macos) — Required for M5StickC Plus2 serial connection
+- [arduinohw](https://github.com/organised/arduinohw) — The project that inspired Safe Bite
+
+## License
+
+MIT
