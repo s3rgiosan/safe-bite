@@ -1,0 +1,1196 @@
+{
+  "version": "1.0",
+  "updated": "2025-01-09",
+  "sources": [
+    "Monash University FODMAP App",
+    "Celiac Disease Foundation"
+  ],
+  "categories": [
+    {"id": "fruits", "name_pt": "Frutas", "name_en": "Fruits"},
+    {"id": "vegetables", "name_pt": "Legumes", "name_en": "Vegetables"},
+    {"id": "proteins", "name_pt": "Proteinas", "name_en": "Proteins"},
+    {"id": "dairy", "name_pt": "Laticinios", "name_en": "Dairy"},
+    {"id": "grains", "name_pt": "Cereais", "name_en": "Grains"},
+    {"id": "drinks", "name_pt": "Bebidas", "name_en": "Drinks"},
+    {"id": "snacks", "name_pt": "Snacks", "name_en": "Snacks"},
+    {"id": "condiments", "name_pt": "Condimentos", "name_en": "Condiments"}
+  ],
+  "foods": [
+    {
+      "name_pt": "Maca",
+      "name_en": "Apple",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Banana",
+      "name_en": "Banana",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Banana verde",
+      "name_en": "Unripe banana",
+      "category": "fruits",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Laranja",
+      "name_en": "Orange",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Morangos",
+      "name_en": "Strawberries",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Uvas",
+      "name_en": "Grapes",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Melancia",
+      "name_en": "Watermelon",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Melao",
+      "name_en": "Cantaloupe",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Ananas",
+      "name_en": "Pineapple",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Manga",
+      "name_en": "Mango",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pera",
+      "name_en": "Pear",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pessego",
+      "name_en": "Peach",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cerejas",
+      "name_en": "Cherries",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Ameixas",
+      "name_en": "Plums",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Framboesas",
+      "name_en": "Raspberries",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Mirtilos",
+      "name_en": "Blueberries",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Kiwi",
+      "name_en": "Kiwi",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Papaia",
+      "name_en": "Papaya",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Toranja",
+      "name_en": "Grapefruit",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Limao",
+      "name_en": "Lemon",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Lima",
+      "name_en": "Lime",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Coco",
+      "name_en": "Coconut",
+      "category": "fruits",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Abacate",
+      "name_en": "Avocado",
+      "category": "fruits",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Damascos",
+      "name_en": "Apricots",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Figos",
+      "name_en": "Figs",
+      "category": "fruits",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cenoura",
+      "name_en": "Carrot",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Batata",
+      "name_en": "Potato",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Batata doce",
+      "name_en": "Sweet potato",
+      "category": "vegetables",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Tomate",
+      "name_en": "Tomato",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pepino",
+      "name_en": "Cucumber",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Alface",
+      "name_en": "Lettuce",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Espinafres",
+      "name_en": "Spinach",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Brocolos",
+      "name_en": "Broccoli",
+      "category": "vegetables",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Couve-flor",
+      "name_en": "Cauliflower",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Couve",
+      "name_en": "Cabbage",
+      "category": "vegetables",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cebola",
+      "name_en": "Onion",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Alho",
+      "name_en": "Garlic",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Alho frances",
+      "name_en": "Leek",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pimento",
+      "name_en": "Bell pepper",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Beringela",
+      "name_en": "Eggplant",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Curgete",
+      "name_en": "Zucchini",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Abobora",
+      "name_en": "Pumpkin",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cogumelos",
+      "name_en": "Mushrooms",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Espargos",
+      "name_en": "Asparagus",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Ervilhas",
+      "name_en": "Peas",
+      "category": "vegetables",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Feijao verde",
+      "name_en": "Green beans",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Feijao",
+      "name_en": "Beans",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Grao de bico",
+      "name_en": "Chickpeas",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Lentilhas",
+      "name_en": "Lentils",
+      "category": "vegetables",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Milho",
+      "name_en": "Corn",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Aipo",
+      "name_en": "Celery",
+      "category": "vegetables",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Nabo",
+      "name_en": "Turnip",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Beterraba",
+      "name_en": "Beetroot",
+      "category": "vegetables",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Rabanete",
+      "name_en": "Radish",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Azeitonas",
+      "name_en": "Olives",
+      "category": "vegetables",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Frango",
+      "name_en": "Chicken",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Peru",
+      "name_en": "Turkey",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Carne de vaca",
+      "name_en": "Beef",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Carne de porco",
+      "name_en": "Pork",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Borrego",
+      "name_en": "Lamb",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pato",
+      "name_en": "Duck",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Bacon",
+      "name_en": "Bacon",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Presunto",
+      "name_en": "Ham",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Salsicha",
+      "name_en": "Sausage",
+      "category": "proteins",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Ovo",
+      "name_en": "Egg",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Salmao",
+      "name_en": "Salmon",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Atum",
+      "name_en": "Tuna",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Bacalhau",
+      "name_en": "Cod",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Sardinha",
+      "name_en": "Sardine",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Camarao",
+      "name_en": "Shrimp",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Polvo",
+      "name_en": "Octopus",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Lulas",
+      "name_en": "Squid",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Mexilhoes",
+      "name_en": "Mussels",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Tofu",
+      "name_en": "Tofu",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Tempeh",
+      "name_en": "Tempeh",
+      "category": "proteins",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Leite de vaca",
+      "name_en": "Cow milk",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Leite sem lactose",
+      "name_en": "Lactose-free milk",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Leite de amendoa",
+      "name_en": "Almond milk",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Leite de aveia",
+      "name_en": "Oat milk",
+      "category": "dairy",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Leite de arroz",
+      "name_en": "Rice milk",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Leite de coco",
+      "name_en": "Coconut milk",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Leite de soja",
+      "name_en": "Soy milk",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Iogurte natural",
+      "name_en": "Plain yogurt",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Iogurte sem lactose",
+      "name_en": "Lactose-free yogurt",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Queijo cheddar",
+      "name_en": "Cheddar cheese",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Queijo parmesao",
+      "name_en": "Parmesan",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Queijo brie",
+      "name_en": "Brie cheese",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Queijo mozzarella",
+      "name_en": "Mozzarella",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Queijo fresco",
+      "name_en": "Fresh cheese",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Queijo cottage",
+      "name_en": "Cottage cheese",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Queijo ricotta",
+      "name_en": "Ricotta",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Natas",
+      "name_en": "Cream",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Manteiga",
+      "name_en": "Butter",
+      "category": "dairy",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Gelado",
+      "name_en": "Ice cream",
+      "category": "dairy",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Arroz",
+      "name_en": "Rice",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Arroz integral",
+      "name_en": "Brown rice",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Quinoa",
+      "name_en": "Quinoa",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Aveia",
+      "name_en": "Oats",
+      "category": "grains",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Aveia sem gluten",
+      "name_en": "Gluten-free oats",
+      "category": "grains",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Trigo",
+      "name_en": "Wheat",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Pao de trigo",
+      "name_en": "Wheat bread",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Pao sem gluten",
+      "name_en": "Gluten-free bread",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pao de espelta",
+      "name_en": "Spelt bread",
+      "category": "grains",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Massa",
+      "name_en": "Pasta",
+      "category": "grains",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Massa sem gluten",
+      "name_en": "Gluten-free pasta",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cuscuz",
+      "name_en": "Couscous",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Bulgur",
+      "name_en": "Bulgur",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Cevada",
+      "name_en": "Barley",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Centeio",
+      "name_en": "Rye",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Milho",
+      "name_en": "Corn",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Polenta",
+      "name_en": "Polenta",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Tapioca",
+      "name_en": "Tapioca",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Farinha de trigo",
+      "name_en": "Wheat flour",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Farinha de arroz",
+      "name_en": "Rice flour",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Farinha de amendoa",
+      "name_en": "Almond flour",
+      "category": "grains",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cereais de pequeno-almoco",
+      "name_en": "Breakfast cereal",
+      "category": "grains",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Agua",
+      "name_en": "Water",
+      "category": "drinks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cha preto",
+      "name_en": "Black tea",
+      "category": "drinks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cha verde",
+      "name_en": "Green tea",
+      "category": "drinks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cha de camomila",
+      "name_en": "Chamomile tea",
+      "category": "drinks",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cafe",
+      "name_en": "Coffee",
+      "category": "drinks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Sumo de laranja",
+      "name_en": "Orange juice",
+      "category": "drinks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Sumo de maca",
+      "name_en": "Apple juice",
+      "category": "drinks",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Sumo de uva",
+      "name_en": "Grape juice",
+      "category": "drinks",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Limonada",
+      "name_en": "Lemonade",
+      "category": "drinks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Coca-Cola",
+      "name_en": "Coca-Cola",
+      "category": "drinks",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Cerveja",
+      "name_en": "Beer",
+      "category": "drinks",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Vinho",
+      "name_en": "Wine",
+      "category": "drinks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Chocolate quente",
+      "name_en": "Hot chocolate",
+      "category": "drinks",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Batatas fritas",
+      "name_en": "French fries",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Chips de batata",
+      "name_en": "Potato chips",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pipocas",
+      "name_en": "Popcorn",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Bolachas de trigo",
+      "name_en": "Wheat crackers",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Bolachas de arroz",
+      "name_en": "Rice crackers",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Chocolate negro",
+      "name_en": "Dark chocolate",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Chocolate de leite",
+      "name_en": "Milk chocolate",
+      "category": "snacks",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Chocolate branco",
+      "name_en": "White chocolate",
+      "category": "snacks",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Gomas",
+      "name_en": "Gummy candy",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Bolo",
+      "name_en": "Cake",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Croissant",
+      "name_en": "Croissant",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Pastel de nata",
+      "name_en": "Custard tart",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Amendoins",
+      "name_en": "Peanuts",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Amendoas",
+      "name_en": "Almonds",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Nozes",
+      "name_en": "Walnuts",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Castanhas de caju",
+      "name_en": "Cashews",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pistacios",
+      "name_en": "Pistachios",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Sementes de girassol",
+      "name_en": "Sunflower seeds",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Sementes de abobora",
+      "name_en": "Pumpkin seeds",
+      "category": "snacks",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pizza",
+      "name_en": "Pizza",
+      "category": "snacks",
+      "fodmap": "high",
+      "gluten": true
+    },
+    {
+      "name_pt": "Hamburguer",
+      "name_en": "Hamburger",
+      "category": "snacks",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Hot dog",
+      "name_en": "Hot dog",
+      "category": "snacks",
+      "fodmap": "moderate",
+      "gluten": true
+    },
+    {
+      "name_pt": "Sal",
+      "name_en": "Salt",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Pimenta",
+      "name_en": "Pepper",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Azeite",
+      "name_en": "Olive oil",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Oleo de coco",
+      "name_en": "Coconut oil",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Vinagre",
+      "name_en": "Vinegar",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Vinagre balsamico",
+      "name_en": "Balsamic vinegar",
+      "category": "condiments",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Mostarda",
+      "name_en": "Mustard",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Ketchup",
+      "name_en": "Ketchup",
+      "category": "condiments",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Maionese",
+      "name_en": "Mayonnaise",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Molho de soja",
+      "name_en": "Soy sauce",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": true
+    },
+    {
+      "name_pt": "Molho de tomate",
+      "name_en": "Tomato sauce",
+      "category": "condiments",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Mel",
+      "name_en": "Honey",
+      "category": "condiments",
+      "fodmap": "high",
+      "gluten": false
+    },
+    {
+      "name_pt": "Acucar",
+      "name_en": "Sugar",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Xarope de acer",
+      "name_en": "Maple syrup",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Manteiga de amendoim",
+      "name_en": "Peanut butter",
+      "category": "condiments",
+      "fodmap": "low",
+      "gluten": false
+    },
+    {
+      "name_pt": "Nutella",
+      "name_en": "Nutella",
+      "category": "condiments",
+      "fodmap": "moderate",
+      "gluten": false
+    },
+    {
+      "name_pt": "Compota",
+      "name_en": "Jam",
+      "category": "condiments",
+      "fodmap": "moderate",
+      "gluten": false
+    }
+  ]
+}
