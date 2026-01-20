@@ -31,7 +31,10 @@ GLUTEN: NO 🟢
 
 ## Blog Series
 
-I'm documenting the build process. Follow along at [s3rgiosan.dev](https://s3rgiosan.dev).
+I'm documenting the build process:
+
+1. [Building Safe Bite: Why I'm Making This](https://s3rgiosan.com/building-safe-bite-why-im-making-this) — The personal story behind this project
+2. Building Safe Bite: Offline Mode — *Coming soon*
 
 ## Acknowledgments
 
