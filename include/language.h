@@ -30,6 +30,11 @@ extern const char* STR_LANGUAGE[];
 extern const char* STR_LANG_NAME[];
 extern const char* STR_NAV_SETTINGS[];
 
+// WiFi status strings
+extern const char* STR_WIFI_CONNECTING[];
+extern const char* STR_WIFI_CONNECTED[];
+extern const char* STR_WIFI_OFFLINE[];
+
 // Shared labels (same in both languages)
 #define STR_FODMAP_LABEL  "FODMAP: "
 #define STR_GLUTEN_LABEL  "GLUTEN: "

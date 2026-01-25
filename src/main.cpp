@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include "language.h"
+#include "wifi_manager.h"
 
 // Language state
 uint8_t currentLang = LANG_EN;
@@ -22,6 +23,11 @@ const char* STR_SETTINGS[] = {"Settings", "Definicoes"};
 const char* STR_LANGUAGE[] = {"Language", "Idioma"};
 const char* STR_LANG_NAME[] = {"English", "Portugues"};
 const char* STR_NAV_SETTINGS[] = {"M5:Change  B:Back", "M5:Mudar  B:Voltar"};
+
+// WiFi status strings
+const char* STR_WIFI_CONNECTING[] = {"Connecting...", "A ligar..."};
+const char* STR_WIFI_CONNECTED[] = {"Connected", "Ligado"};
+const char* STR_WIFI_OFFLINE[] = {"Offline", "Offline"};
 
 // Language functions
 void loadLanguage() {
@@ -189,6 +195,9 @@ void setup() {
     delay(1500);  // Show for 1.5 seconds
     StickCP2.Display.fillScreen(TFT_BLACK);  // Clear before loading screen
 
+    // Initialize WiFi (non-blocking)
+    wifiInit();
+
     // Configure power button GPIO (GPIO35) as input
     pinMode(35, INPUT);
 
@@ -227,6 +236,17 @@ void setup() {
 
 void loop() {
     StickCP2.update();
+
+    // Update WiFi state (non-blocking)
+    wifiUpdate();
+
+    // Redraw WiFi indicator if state changed
+    static WifiState lastWifiState = WIFI_STATE_IDLE;
+    WifiState wifiState = getWifiState();
+    if (wifiState != lastWifiState || wifiState == WIFI_STATE_CONNECTING) {
+        drawWifiIndicator();
+        lastWifiState = wifiState;
+    }
 
     // Power button (GPIO35, left side): Next item (short press)
     // Read directly with debounce for reliable detection
@@ -366,6 +386,9 @@ void loop() {
         StickCP2.Display.print("Sleeping...");
         delay(1000);
 
+        // Disable WiFi to save power
+        wifiDisable();
+
         // Turn off display
         StickCP2.Display.sleep();
 
@@ -494,6 +517,9 @@ void drawCategories() {
     StickCP2.Display.setTextSize(1);
     StickCP2.Display.setCursor(5, 125);
     StickCP2.Display.print(STR(STR_NAV_NEXT_SEL));
+
+    // WiFi indicator
+    drawWifiIndicator();
 }
 
 void drawFoods() {
@@ -562,6 +588,9 @@ void drawFoods() {
     StickCP2.Display.setTextSize(1);
     StickCP2.Display.setCursor(5, 125);
     StickCP2.Display.print(STR(STR_NAV_NEXT_SEL));
+
+    // WiFi indicator
+    drawWifiIndicator();
 }
 
 void drawResult() {
@@ -608,6 +637,9 @@ void drawResult() {
     StickCP2.Display.setTextSize(1);
     StickCP2.Display.setCursor(5, 125);
     StickCP2.Display.print(STR(STR_NAV_BACK));
+
+    // WiFi indicator
+    drawWifiIndicator();
 }
 
 void drawSettings() {
@@ -640,6 +672,9 @@ void drawSettings() {
     StickCP2.Display.setTextSize(1);
     StickCP2.Display.setCursor(5, 125);
     StickCP2.Display.print(STR(STR_NAV_SETTINGS));
+
+    // WiFi indicator
+    drawWifiIndicator();
 }
 
 uint16_t getFodmapColor(const String& level) {
