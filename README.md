@@ -80,7 +80,7 @@ Default baud rate is `115200` as set in `platformio.ini`.
 | Item | Cost |
 |------|------|
 | Hardware | €20-25 (one-time) |
-| OpenAI API | ~€3/month |
+| Mistral API | ~€1/month |
 
 ## Blog Series
 
