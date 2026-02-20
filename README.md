@@ -22,6 +22,59 @@ GLUTEN: NO 🟢
 
 - [M5StickC Plus2](https://shop.m5stack.com/products/m5stickc-plus2-esp32-mini-iot-development-kit) (~€20)
 
+## Setup
+
+1. Clone this repository
+2. Install [PlatformIO](https://platformio.org/install/cli)
+3. Copy `include/config.example.h` to `include/config.h` and fill in your credentials:
+
+```cpp
+// include/config.h
+#define WIFI_SSID "your_network"
+#define WIFI_PASSWORD "your_password"
+#define MISTRAL_API_KEY "..."
+```
+
+## Building & Flashing
+
+All commands use [PlatformIO CLI](https://platformio.org/install/cli).
+
+**Compile the firmware:**
+
+```sh
+pio run
+```
+
+**Upload firmware to the device:**
+
+```sh
+pio run --target upload
+```
+
+**Build and upload the food database (LittleFS filesystem):**
+
+The `data/foods.json` file is stored on the device's LittleFS partition. Upload it separately from the firmware:
+
+```sh
+pio run --target uploadfs
+```
+
+> Run this whenever you edit `data/foods.json`. The device and firmware uploads are independent — you only need to re-flash what changed.
+
+**Full flash (firmware + filesystem):**
+
+```sh
+pio run --target upload && pio run --target uploadfs
+```
+
+**Monitor serial output:**
+
+```sh
+pio device monitor
+```
+
+Default baud rate is `115200` as set in `platformio.ini`.
+
 ## Costs
 
 | Item | Cost |
@@ -34,7 +87,7 @@ GLUTEN: NO 🟢
 I'm documenting the build process:
 
 1. [Building Safe Bite: Why I'm Making This](https://s3rgiosan.com/building-safe-bite-why-im-making-this) — The personal story behind this project
-2. Building Safe Bite: Offline Mode — *Coming soon*
+2. [Building Safe Bite: Offline Mode](https://s3rgiosan.com/building-safe-bite-offline-mode/) — Local database and menu navigation
 
 ## Acknowledgments
 
