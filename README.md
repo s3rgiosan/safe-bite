@@ -17,10 +17,27 @@ GLUTEN: NO 🟢
 - **Offline mode** — Works without WiFi using a local database of 176 foods
 - **Color-coded answers** — Red (avoid), Yellow (small portions), Green (safe)
 - **Kid-friendly** — Simple interface with just 2 buttons
+- **WiFi connectivity** — Non-blocking connection with visual status indicator
+- **Voice recording** — 6-second PDM microphone capture for voice search
 
 ## Hardware
 
 - [M5StickC Plus2](https://shop.m5stack.com/products/m5stickc-plus2-esp32-mini-iot-development-kit) (~€20)
+
+## How it works
+
+**With WiFi:**
+
+1. Press button and speak
+2. Audio sent to Mistral Voxtral (speech-to-text)
+3. Query sent to Mistral Small
+4. Result displayed on screen
+
+**Without WiFi:**
+
+1. Navigate categories with buttons
+2. Select food from list
+3. Result displayed from local database
 
 ## Setup
 
@@ -74,6 +91,27 @@ pio device monitor
 ```
 
 Default baud rate is `115200` as set in `platformio.ini`.
+
+## WiFi Connection
+
+The device connects to WiFi in the background without blocking the UI:
+
+- **Green circle** — Connected and ready for voice search
+- **Yellow blinking** — Connecting...
+- **Red outline** — Disconnected (will auto-retry)
+
+If no `config.h` is present or WiFi fails, the device works in offline mode with the local food database.
+
+## Voice Search
+
+When WiFi is connected, a "Voice Search" option appears at the top of the categories menu:
+
+1. Select "Voice Search" and press M5 button
+2. Speak your food query (6-second recording)
+3. Visual countdown shows recording progress
+4. Audio is captured as 8kHz mono WAV and sent to Mistral Voxtral for transcription
+
+The PDM microphone (SPM1423) captures speech at 8000 Hz sample rate with 16-bit depth.
 
 ## Costs
 

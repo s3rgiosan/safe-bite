@@ -35,6 +35,15 @@ extern const char* STR_WIFI_CONNECTING[];
 extern const char* STR_WIFI_CONNECTED[];
 extern const char* STR_WIFI_OFFLINE[];
 
+// Recording strings
+extern const char* STR_RECORDING[];
+extern const char* STR_SPEAK_NOW[];
+extern const char* STR_PROCESSING[];
+extern const char* STR_VOICE_SEARCH[];
+
+// Main menu strings
+extern const char* STR_BROWSE_FOODS[];
+
 // Shared labels (same in both languages)
 #define STR_FODMAP_LABEL  "FODMAP: "
 #define STR_GLUTEN_LABEL  "GLUTEN: "

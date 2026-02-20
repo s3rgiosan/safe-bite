@@ -4,6 +4,7 @@
 #include <Preferences.h>
 #include "language.h"
 #include "wifi_manager.h"
+#include "audio_manager.h"
 
 // Language state
 uint8_t currentLang = LANG_EN;
@@ -29,6 +30,15 @@ const char* STR_WIFI_CONNECTING[] = {"Connecting...", "A ligar..."};
 const char* STR_WIFI_CONNECTED[] = {"Connected", "Ligado"};
 const char* STR_WIFI_OFFLINE[] = {"Offline", "Offline"};
 
+// Recording strings
+const char* STR_RECORDING[] = {"Recording...", "A gravar..."};
+const char* STR_SPEAK_NOW[] = {"Speak now!", "Fale agora!"};
+const char* STR_PROCESSING[] = {"Processing...", "A processar..."};
+const char* STR_VOICE_SEARCH[] = {"Voice Search", "Pesquisa Voz"};
+
+// Main menu strings
+const char* STR_BROWSE_FOODS[] = {"Browse Foods", "Ver Alimentos"};
+
 // Language functions
 void loadLanguage() {
     prefs.begin("safebite", true);  // read-only
@@ -49,10 +59,12 @@ void toggleLanguage() {
 
 // Menu states
 enum MenuState {
+    STATE_MAIN_MENU,
     STATE_CATEGORIES,
     STATE_FOODS,
     STATE_RESULT,
-    STATE_SETTINGS
+    STATE_SETTINGS,
+    STATE_RECORDING
 };
 
 // Food structure
@@ -72,7 +84,7 @@ struct Category {
 };
 
 // Global state
-MenuState currentState = STATE_CATEGORIES;
+MenuState currentState = STATE_MAIN_MENU;
 int currentIndex = 0;
 int itemCount = 0;
 String selectedCategory = "";
@@ -107,6 +119,7 @@ const unsigned long INACTIVITY_TIMEOUT = 5 * 60 * 1000;  // 5 minutes in ms
 
 // Function declarations
 void loadFoodsDatabase();
+void drawMainMenu();
 void drawCategories();
 void drawFoods();
 void drawResult();
@@ -198,6 +211,11 @@ void setup() {
     // Initialize WiFi (non-blocking)
     wifiInit();
 
+    // Initialize audio recording (allocate buffer)
+    if (!audioInit()) {
+        Serial.println("WARNING: Audio buffer allocation failed - voice search unavailable");
+    }
+
     // Configure power button GPIO (GPIO35) as input
     pinMode(35, INPUT);
 
@@ -221,11 +239,10 @@ void setup() {
     // Load food database
     loadFoodsDatabase();
 
-    // Initial display
-    currentState = STATE_CATEGORIES;
+    // Initial display - main menu
+    currentState = STATE_MAIN_MENU;
     currentIndex = 0;
-    itemCount = categoryCount + 1;  // +1 for Settings item
-    drawCategories();
+    drawMainMenu();
 
     // Initialize power button state to avoid false trigger on startup
     lastPwrState = (digitalRead(35) == LOW);
@@ -257,10 +274,19 @@ void loop() {
         lastPwrPress = now;
         lastActivityTime = millis();  // Reset inactivity timer
         switch (currentState) {
-            case STATE_CATEGORIES:
-                currentIndex = (currentIndex + 1) % itemCount;
+            case STATE_MAIN_MENU: {
+                // Online: Voice Search, Browse Foods, Settings (3 items)
+                // Offline: Browse Foods, Settings (2 items)
+                int totalItems = isOnline() ? 3 : 2;
+                currentIndex = (currentIndex + 1) % totalItems;
+                drawMainMenu();
+                break;
+            }
+            case STATE_CATEGORIES: {
+                currentIndex = (currentIndex + 1) % categoryCount;
                 drawCategories();
                 break;
+            }
             case STATE_FOODS:
                 currentIndex = (currentIndex + 1) % itemCount;
                 resetScroll(getName(*filteredFoods[currentIndex]));
@@ -268,6 +294,7 @@ void loop() {
                 break;
             case STATE_SETTINGS:
             case STATE_RESULT:
+            case STATE_RECORDING:
                 // No next action on these screens
                 break;
         }
@@ -278,24 +305,61 @@ void loop() {
     if (StickCP2.BtnA.wasPressed()) {
         lastActivityTime = millis();  // Reset inactivity timer
         switch (currentState) {
-            case STATE_CATEGORIES:
-                if (currentIndex == categoryCount) {
-                    // Settings selected
-                    currentState = STATE_SETTINGS;
-                    drawSettings();
-                } else {
-                    // Select category -> show foods
-                    selectedCategory = categories[currentIndex].id;
-                    filterFoodsByCategory(selectedCategory);
-                    if (filteredCount > 0) {
-                        currentState = STATE_FOODS;
+            case STATE_MAIN_MENU: {
+                // Online: 0=Voice Search, 1=Browse Foods, 2=Settings
+                // Offline: 0=Browse Foods, 1=Settings
+                if (isOnline()) {
+                    if (currentIndex == 0) {
+                        // Voice Search selected - start recording
+                        if (audioStartRecording()) {
+                            currentState = STATE_RECORDING;
+                        } else {
+                            // Audio init failed - show error briefly
+                            StickCP2.Display.fillScreen(TFT_BLACK);
+                            StickCP2.Display.setTextColor(TFT_RED);
+                            StickCP2.Display.setTextSize(2);
+                            StickCP2.Display.setCursor(30, 50);
+                            StickCP2.Display.print("Audio Error!");
+                            delay(1500);
+                            drawMainMenu();
+                        }
+                    } else if (currentIndex == 1) {
+                        // Browse Foods selected
+                        currentState = STATE_CATEGORIES;
                         currentIndex = 0;
-                        itemCount = filteredCount;
-                        resetScroll(getName(*filteredFoods[0]));
-                        drawFoods();
+                        drawCategories();
+                    } else {
+                        // Settings selected
+                        currentState = STATE_SETTINGS;
+                        drawSettings();
+                    }
+                } else {
+                    if (currentIndex == 0) {
+                        // Browse Foods selected
+                        currentState = STATE_CATEGORIES;
+                        currentIndex = 0;
+                        drawCategories();
+                    } else {
+                        // Settings selected
+                        currentState = STATE_SETTINGS;
+                        drawSettings();
                     }
                 }
                 break;
+            }
+            case STATE_CATEGORIES: {
+                // Select category -> show foods
+                selectedCategory = categories[currentIndex].id;
+                filterFoodsByCategory(selectedCategory);
+                if (filteredCount > 0) {
+                    currentState = STATE_FOODS;
+                    currentIndex = 0;
+                    itemCount = filteredCount;
+                    resetScroll(getName(*filteredFoods[0]));
+                    drawFoods();
+                }
+                break;
+            }
             case STATE_FOODS:
                 // Select food -> show result
                 currentState = STATE_RESULT;
@@ -310,6 +374,9 @@ void loop() {
             case STATE_RESULT:
                 // No action
                 break;
+            case STATE_RECORDING:
+                // No action
+                break;
         }
     }
 
@@ -317,11 +384,19 @@ void loop() {
     if (StickCP2.BtnB.wasPressed()) {
         lastActivityTime = millis();  // Reset inactivity timer
         switch (currentState) {
+            case STATE_MAIN_MENU:
+                // Already at top level, no action
+                break;
+            case STATE_CATEGORIES:
+                // Back to main menu
+                currentState = STATE_MAIN_MENU;
+                currentIndex = 0;
+                drawMainMenu();
+                break;
             case STATE_FOODS:
                 // Back to categories
                 currentState = STATE_CATEGORIES;
                 currentIndex = 0;
-                itemCount = categoryCount + 1;
                 drawCategories();
                 break;
             case STATE_RESULT:
@@ -331,15 +406,45 @@ void loop() {
                 drawFoods();
                 break;
             case STATE_SETTINGS:
-                // Back to categories
-                currentState = STATE_CATEGORIES;
+                // Back to main menu
+                currentState = STATE_MAIN_MENU;
                 currentIndex = 0;
-                itemCount = categoryCount + 1;
-                drawCategories();
+                drawMainMenu();
                 break;
-            case STATE_CATEGORIES:
-                // Already at top level, no action
+            case STATE_RECORDING:
+                // Cancel recording, back to main menu
+                audioReset();
+                currentState = STATE_MAIN_MENU;
+                currentIndex = 0;
+                drawMainMenu();
                 break;
+        }
+    }
+
+    // Handle recording state
+    if (currentState == STATE_RECORDING) {
+        audioUpdate();
+
+        AudioState audioState = getAudioState();
+        if (audioState == AUDIO_COMPLETE) {
+            // Recording done - for now, just go back to main menu
+            // In Phase 5, this will trigger API call
+            audioReset();
+            currentState = STATE_MAIN_MENU;
+            currentIndex = 0;
+            drawMainMenu();
+        } else if (audioState == AUDIO_ERROR) {
+            // Audio error during recording - recover gracefully
+            audioReset();
+            StickCP2.Display.fillScreen(TFT_BLACK);
+            StickCP2.Display.setTextColor(TFT_RED);
+            StickCP2.Display.setTextSize(2);
+            StickCP2.Display.setCursor(30, 50);
+            StickCP2.Display.print("Audio Error!");
+            delay(1500);
+            currentState = STATE_MAIN_MENU;
+            currentIndex = 0;
+            drawMainMenu();
         }
     }
 
@@ -463,6 +568,68 @@ void filterFoodsByCategory(const String& categoryId) {
     }
 }
 
+void drawMainMenu() {
+    StickCP2.Display.fillScreen(TFT_BLACK);
+
+    // Title
+    StickCP2.Display.setTextColor(TFT_GREEN);
+    StickCP2.Display.setTextSize(2);
+    StickCP2.Display.setCursor(5, 5);
+    StickCP2.Display.print("Safe Bite");
+
+    // Draw line under title
+    StickCP2.Display.drawLine(0, 25, 240, 25, TFT_DARKGREY);
+
+    // Calculate total items
+    // Online: Voice Search, Browse Foods, Settings (3 items)
+    // Offline: Browse Foods, Settings (2 items)
+    bool online = isOnline();
+    int totalItems = online ? 3 : 2;
+
+    // Draw menu items
+    int y = 35;
+    for (int i = 0; i < totalItems; i++) {
+        if (i == currentIndex) {
+            // Highlighted item - blue background
+            StickCP2.Display.fillRect(0, y - 2, 240, 20, TFT_BLUE);
+            StickCP2.Display.setTextColor(TFT_WHITE);
+        } else {
+            StickCP2.Display.setTextColor(TFT_LIGHTGREY);
+        }
+
+        StickCP2.Display.setTextSize(2);
+        StickCP2.Display.setCursor(10, y);
+
+        if (online) {
+            // Online mode: Voice Search, Browse Foods, Settings
+            if (i == 0) {
+                StickCP2.Display.print(STR(STR_VOICE_SEARCH));
+            } else if (i == 1) {
+                StickCP2.Display.print(STR(STR_BROWSE_FOODS));
+            } else {
+                StickCP2.Display.print(STR(STR_SETTINGS));
+            }
+        } else {
+            // Offline mode: Browse Foods, Settings
+            if (i == 0) {
+                StickCP2.Display.print(STR(STR_BROWSE_FOODS));
+            } else {
+                StickCP2.Display.print(STR(STR_SETTINGS));
+            }
+        }
+        y += 25;
+    }
+
+    // Navigation hint
+    StickCP2.Display.setTextColor(TFT_DARKGREY);
+    StickCP2.Display.setTextSize(1);
+    StickCP2.Display.setCursor(5, 125);
+    StickCP2.Display.print(STR(STR_NAV_NEXT_SEL));
+
+    // WiFi indicator
+    drawWifiIndicator();
+}
+
 void drawCategories() {
     StickCP2.Display.fillScreen(TFT_BLACK);
 
@@ -475,22 +642,19 @@ void drawCategories() {
     // Draw line under title
     StickCP2.Display.drawLine(0, 18, 240, 18, TFT_DARKGREY);
 
-    // Total items = categories + Settings
-    int totalItems = categoryCount + 1;
-
     // Calculate visible items (show 5 items max)
     int startIdx = 0;
     if (currentIndex >= 3) {
         startIdx = currentIndex - 2;
-        if (startIdx + 5 > totalItems) {
-            startIdx = totalItems - 5;
+        if (startIdx + 5 > categoryCount) {
+            startIdx = categoryCount - 5;
             if (startIdx < 0) startIdx = 0;
         }
     }
 
-    // Draw items
+    // Draw category items
     int y = 25;
-    for (int i = startIdx; i < min(startIdx + 5, totalItems); i++) {
+    for (int i = startIdx; i < min(startIdx + 5, categoryCount); i++) {
         if (i == currentIndex) {
             // Highlighted item
             StickCP2.Display.fillRect(0, y - 2, 240, 20, TFT_BLUE);
@@ -501,14 +665,7 @@ void drawCategories() {
 
         StickCP2.Display.setTextSize(2);
         StickCP2.Display.setCursor(10, y);
-
-        if (i < categoryCount) {
-            // Regular category
-            StickCP2.Display.print(getName(categories[i]));
-        } else {
-            // Settings item (last)
-            StickCP2.Display.print(STR(STR_SETTINGS));
-        }
+        StickCP2.Display.print(getName(categories[i]));
         y += 22;
     }
 
@@ -517,6 +674,8 @@ void drawCategories() {
     StickCP2.Display.setTextSize(1);
     StickCP2.Display.setCursor(5, 125);
     StickCP2.Display.print(STR(STR_NAV_NEXT_SEL));
+    StickCP2.Display.print("  ");
+    StickCP2.Display.print(STR(STR_NAV_BACK));
 
     // WiFi indicator
     drawWifiIndicator();
