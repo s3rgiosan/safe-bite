@@ -1,5 +1,5 @@
 #include "wifi_manager.h"
-#include "M5StickCPlus2.h"
+#include <M5Unified.h>
 #include <WiFi.h>
 
 // Try to include config.h - if it doesn't exist, WiFi will be disabled
@@ -146,27 +146,27 @@ void drawWifiIndicator() {
     }
 
     // Clear previous indicator
-    StickCP2.Display.fillCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
+    M5.Display.fillCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
                                  WIFI_INDICATOR_RADIUS + 1, TFT_BLACK);
 
     switch (currentWifiState) {
         case WIFI_STATE_CONNECTED:
             // Green filled circle
-            StickCP2.Display.fillCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
+            M5.Display.fillCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
                                         WIFI_INDICATOR_RADIUS, TFT_GREEN);
             break;
 
         case WIFI_STATE_CONNECTING:
             // Yellow blinking circle
             if (indicatorVisible) {
-                StickCP2.Display.fillCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
+                M5.Display.fillCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
                                             WIFI_INDICATOR_RADIUS, TFT_YELLOW);
             }
             break;
 
         case WIFI_STATE_DISCONNECTED:
             // Red outline circle
-            StickCP2.Display.drawCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
+            M5.Display.drawCircle(WIFI_INDICATOR_X, WIFI_INDICATOR_Y + WIFI_INDICATOR_RADIUS,
                                         WIFI_INDICATOR_RADIUS, TFT_RED);
             break;
 

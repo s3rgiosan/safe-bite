@@ -1,4 +1,4 @@
-#include "M5StickCPlus2.h"
+#include <M5Unified.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
@@ -6,6 +6,16 @@
 #include "wifi_manager.h"
 #include "audio_manager.h"
 #include "mistral_client.h"
+#include "fonts/DejaVuSans6pt_Latin.h"
+#include "fonts/DejaVuSans8pt_Latin.h"
+#include "fonts/DejaVuSans9pt_Latin.h"
+#include "fonts/DejaVuSans14pt_Latin.h"
+
+// DejaVu proportional font aliases (custom: ASCII + Latin-1, U+0020–U+00FF)
+#define FONT_SMALL  &DejaVuSans6pt8b
+#define FONT_HEADER &DejaVuSans8pt8b
+#define FONT_MEDIUM &DejaVuSans9pt8b
+#define FONT_LARGE  &DejaVuSans14pt8b
 
 // Language state
 uint8_t currentLang = LANG_EN;
@@ -14,16 +24,16 @@ Preferences prefs;
 // String arrays [EN, PT]
 const char* STR_LOADING[] = {"Loading...", "A carregar..."};
 const char* STR_TITLE[] = {"Safe Bite - Categories", "Safe Bite - Categorias"};
-const char* STR_NAV_NEXT_SEL[] = {"PWR:Next  M5:Select", "PWR:Prox  M5:Escolher"};
+const char* STR_NAV_NEXT_SEL[] = {"PWR:Next  M5:Select", "PWR:Próx  M5:Escolher"};
 const char* STR_NAV_BACK[] = {"B:Back", "B:Voltar"};
 const char* STR_YES[] = {"YES", "SIM"};
-const char* STR_NO[] = {"NO", "NAO"};
+const char* STR_NO[] = {"NO", "NÃO"};
 const char* STR_FODMAP_LOW[] = {"LOW", "BAIXO"};
 const char* STR_FODMAP_MOD[] = {"MOD", "MOD"};
 const char* STR_FODMAP_HIGH[] = {"HIGH", "ALTO"};
-const char* STR_SETTINGS[] = {"Settings", "Definicoes"};
+const char* STR_SETTINGS[] = {"Settings", "Definições"};
 const char* STR_LANGUAGE[] = {"Language", "Idioma"};
-const char* STR_LANG_NAME[] = {"English", "Portugues"};
+const char* STR_LANG_NAME[] = {"English", "Português"};
 const char* STR_NAV_SETTINGS[] = {"M5:Change  B:Back", "M5:Mudar  B:Voltar"};
 
 // WiFi status strings
@@ -40,7 +50,7 @@ const char* STR_VOICE_SEARCH[] = {"Voice Search", "Pesquisa Voz"};
 // Main menu strings
 const char* STR_BROWSE_FOODS[] = {"Browse Foods", "Ver Alimentos"};
 const char* STR_ERROR_API[]    = {"API Error", "Erro de API"};
-const char* STR_NOT_FOOD[]     = {"Not a food", "Nao e' alimento"};
+const char* STR_NOT_FOOD[]     = {"Not a food", "Não é alimento"};
 const char* STR_TRY_AGAIN[]    = {"Try again", "Tente novamente"};
 
 // Language functions
@@ -116,9 +126,9 @@ const uint16_t COLOR_UNKNOWN = TFT_BLUE;
 String scrollText = "";
 int scrollPos = 0;
 unsigned long lastScrollTime = 0;
-const int SCROLL_DELAY = 300;      // ms between scroll steps
-const int SCROLL_PAUSE = 1500;     // ms pause at start/end
-const int MAX_DISPLAY_CHARS = 14;  // chars that fit at text size 2
+const int SCROLL_DELAY = 300;        // ms between scroll steps
+const int SCROLL_PAUSE = 1500;       // ms pause at start/end
+const int SCROLL_AREA_WIDTH = 220;   // pixels available for scrolling text
 bool scrollPaused = true;
 int lastFoodIndex = -1;  // Track food index for scroll reset
 
@@ -158,20 +168,22 @@ void resetScroll(const String& text) {
     scrollPaused = true;
 }
 
-// Get the visible portion of scrolling text
+// Get the visible portion of scrolling text (pixel-based for proportional fonts)
 String getScrolledText(const String& text) {
-    if (text.length() <= MAX_DISPLAY_CHARS) {
+    if (M5.Display.textWidth(text.c_str()) <= SCROLL_AREA_WIDTH) {
         return text;
     }
 
     // Add padding for smooth loop
     String padded = text + "   " + text;
-    return padded.substring(scrollPos, scrollPos + MAX_DISPLAY_CHARS);
+    String visible = padded.substring(scrollPos);
+    int len = M5.Display.textLength(visible.c_str(), SCROLL_AREA_WIDTH);
+    return visible.substring(0, len);
 }
 
 // Update scroll position (call from loop)
 bool updateScroll() {
-    if (scrollText.length() <= MAX_DISPLAY_CHARS) {
+    if (M5.Display.textWidth(scrollText.c_str()) <= SCROLL_AREA_WIDTH) {
         return false;  // No scroll needed
     }
 
@@ -193,32 +205,42 @@ bool updateScroll() {
     return false;
 }
 
-// Power button state tracking
-bool lastPwrState = true;  // Start as true to require release before first press
+// Power button debounce
 unsigned long lastPwrPress = 0;
 const unsigned long PWR_DEBOUNCE = 200;  // 200ms debounce
 
 void setup() {
     auto cfg = M5.config();
-    StickCP2.begin(cfg);
+    M5.begin(cfg);
     Serial.begin(115200);
-    StickCP2.Display.setRotation(1);
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.setRotation(1);
+    M5.Display.fillScreen(TFT_BLACK);
+    M5.Display.setTextSize(1);
+    M5.Display.setTextDatum(textdatum_t::top_left);
 
-    // Splash screen
-    StickCP2.Display.setTextColor(TFT_GREEN);
-    StickCP2.Display.setTextSize(3);
-    StickCP2.Display.setCursor(35, 50);
-    StickCP2.Display.print("Safe Bite");
+    // Splash screen — vertically and horizontally centered
+    M5.Display.setFont(FONT_LARGE);
+    int titleW = M5.Display.textWidth("Safe Bite");
+    int titleH = M5.Display.fontHeight();
+    M5.Display.setFont(FONT_SMALL);
+    int tagW = M5.Display.textWidth("Food Safety Checker");
+    int tagH = M5.Display.fontHeight();
+    int gap = 8;
+    int totalH = titleH + gap + tagH;
+    int startY = (135 - totalH) / 2;
 
-    // Tagline
-    StickCP2.Display.setTextColor(TFT_LIGHTGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(55, 90);
-    StickCP2.Display.print("Food Safety Checker");
+    M5.Display.setFont(FONT_LARGE);
+    M5.Display.setTextColor(TFT_GREEN);
+    M5.Display.setCursor((240 - titleW) / 2, startY);
+    M5.Display.print("Safe Bite");
+
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setTextColor(TFT_LIGHTGREY);
+    M5.Display.setCursor((240 - tagW) / 2, startY + titleH + gap);
+    M5.Display.print("Food Safety Checker");
 
     delay(1500);  // Show for 1.5 seconds
-    StickCP2.Display.fillScreen(TFT_BLACK);  // Clear before loading screen
+    M5.Display.fillScreen(TFT_BLACK);  // Clear before loading screen
 
     // Initialize WiFi (non-blocking)
     wifiInit();
@@ -228,23 +250,24 @@ void setup() {
         Serial.println("WARNING: Audio buffer allocation failed - voice search unavailable");
     }
 
-    // Configure power button GPIO (GPIO35) as input
-    pinMode(35, INPUT);
+    // Power button is handled by M5Unified via M5.BtnPWR
 
     // Load saved language preference
     loadLanguage();
 
     // Show loading screen
-    StickCP2.Display.setTextColor(TFT_WHITE);
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setCursor(20, 50);
-    StickCP2.Display.print(STR(STR_LOADING));
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setCursor(20, 50);
+    M5.Display.print(STR(STR_LOADING));
 
     // Initialize LittleFS
     if (!LittleFS.begin(true)) {
-        StickCP2.Display.fillScreen(TFT_RED);
-        StickCP2.Display.setCursor(10, 50);
-        StickCP2.Display.print("FS Error!");
+        M5.Display.fillScreen(TFT_RED);
+        M5.Display.setFont(FONT_MEDIUM);
+        M5.Display.setTextColor(TFT_WHITE);
+        M5.Display.setCursor(10, 50);
+        M5.Display.print("FS Error!");
         while (1) delay(1000);
     }
 
@@ -256,33 +279,29 @@ void setup() {
     currentIndex = 0;
     drawMainMenu();
 
-    // Initialize power button state to avoid false trigger on startup
-    lastPwrState = (digitalRead(35) == LOW);
-
     // Initialize inactivity timer
     lastActivityTime = millis();
 }
 
 void loop() {
-    StickCP2.update();
+    M5.update();
 
     // Update WiFi state (non-blocking)
     wifiUpdate();
 
-    // Redraw WiFi indicator if state changed
+    // Redraw WiFi indicator if state changed (main menu only)
     static WifiState lastWifiState = WIFI_STATE_IDLE;
     WifiState wifiState = getWifiState();
-    if (wifiState != lastWifiState || wifiState == WIFI_STATE_CONNECTING) {
+    if ((wifiState != lastWifiState || wifiState == WIFI_STATE_CONNECTING)
+        && currentState == STATE_MAIN_MENU) {
         drawWifiIndicator();
         lastWifiState = wifiState;
     }
 
-    // Power button (GPIO35, left side): Next item (short press)
-    // Read directly with debounce for reliable detection
-    bool pwrPressed = (digitalRead(35) == LOW);
+    // Power button (left side): Next item (short press)
     unsigned long now = millis();
 
-    if (pwrPressed && !lastPwrState && (now - lastPwrPress > PWR_DEBOUNCE)) {
+    if (M5.BtnPWR.wasClicked() && (now - lastPwrPress > PWR_DEBOUNCE)) {
         lastPwrPress = now;
         lastActivityTime = millis();  // Reset inactivity timer
         switch (currentState) {
@@ -312,10 +331,9 @@ void loop() {
                 break;
         }
     }
-    lastPwrState = pwrPressed;
 
     // Button A (big M5): Select / Change
-    if (StickCP2.BtnA.wasPressed()) {
+    if (M5.BtnA.wasPressed()) {
         lastActivityTime = millis();  // Reset inactivity timer
         switch (currentState) {
             case STATE_MAIN_MENU: {
@@ -328,11 +346,7 @@ void loop() {
                             currentState = STATE_RECORDING;
                         } else {
                             // Audio init failed - show error briefly
-                            StickCP2.Display.fillScreen(TFT_BLACK);
-                            StickCP2.Display.setTextColor(TFT_RED);
-                            StickCP2.Display.setTextSize(2);
-                            StickCP2.Display.setCursor(30, 50);
-                            StickCP2.Display.print("Audio Error!");
+                            drawError("Audio Error", STR(STR_TRY_AGAIN));
                             delay(1500);
                             drawMainMenu();
                         }
@@ -398,7 +412,7 @@ void loop() {
     }
 
     // Button B (right side): Back
-    if (StickCP2.BtnB.wasPressed()) {
+    if (M5.BtnB.wasPressed()) {
         lastActivityTime = millis();  // Reset inactivity timer
         switch (currentState) {
             case STATE_MAIN_MENU:
@@ -540,11 +554,7 @@ void loop() {
         } else if (audioState == AUDIO_ERROR) {
             // Audio error during recording - recover gracefully
             audioReset();
-            StickCP2.Display.fillScreen(TFT_BLACK);
-            StickCP2.Display.setTextColor(TFT_RED);
-            StickCP2.Display.setTextSize(2);
-            StickCP2.Display.setCursor(30, 50);
-            StickCP2.Display.print("Audio Error!");
+            drawError("Audio Error", STR(STR_TRY_AGAIN));
             delay(1500);
             currentState = STATE_MAIN_MENU;
             currentIndex = 0;
@@ -552,54 +562,54 @@ void loop() {
         }
     }
 
-    // Update scrolling text
+    // Update scrolling text (font must be set before pixel measurement)
     if (currentState == STATE_RESULT) {
+        M5.Display.setFont(FONT_HEADER);
         if (updateScroll()) {
             // Redraw just the name area
-            StickCP2.Display.fillRect(10, 8, 220, 20, TFT_BLACK);
-            StickCP2.Display.setTextColor(TFT_WHITE);
-            StickCP2.Display.setTextSize(2);
-            StickCP2.Display.setCursor(10, 8);
-            StickCP2.Display.print(getScrolledText(scrollText));
+            M5.Display.fillRect(10, 8, 220, 20, TFT_BLACK);
+            M5.Display.setTextColor(TFT_WHITE);
+            M5.Display.setCursor(10, 8);
+            M5.Display.print(getScrolledText(scrollText));
         }
     } else if (currentState == STATE_FOODS) {
+        M5.Display.setFont(FONT_MEDIUM);
         if (updateScroll()) {
             // Calculate Y position of highlighted item
             int startIdx = 0;
-            if (currentIndex >= 3) {
-                startIdx = currentIndex - 2;
-                if (startIdx + 5 > filteredCount) {
-                    startIdx = filteredCount - 5;
+            if (currentIndex >= 2) {
+                startIdx = currentIndex - 1;
+                if (startIdx + 4 > filteredCount) {
+                    startIdx = filteredCount - 4;
                     if (startIdx < 0) startIdx = 0;
                 }
             }
             int highlightRow = currentIndex - startIdx;
-            int y = 25 + (highlightRow * 22);
+            int y = 32 + (highlightRow * 22);
 
             // Redraw just the highlighted item's text area
-            StickCP2.Display.fillRect(10, y, 220, 16, TFT_BLUE);
-            StickCP2.Display.setTextColor(TFT_WHITE);
-            StickCP2.Display.setTextSize(2);
-            StickCP2.Display.setCursor(10, y);
-            StickCP2.Display.print(getScrolledText(scrollText));
+            M5.Display.fillRect(10, y + 1, 220, 21, TFT_BLUE);
+            M5.Display.setTextColor(TFT_WHITE);
+            M5.Display.setCursor(10, y);
+            M5.Display.print(getScrolledText(scrollText));
         }
     }
 
     // Check for inactivity timeout
     if (millis() - lastActivityTime > INACTIVITY_TIMEOUT) {
         // Visual feedback before sleep
-        StickCP2.Display.fillScreen(TFT_BLACK);
-        StickCP2.Display.setTextColor(TFT_DARKGREY);
-        StickCP2.Display.setTextSize(2);
-        StickCP2.Display.setCursor(40, 55);
-        StickCP2.Display.print("Sleeping...");
+        M5.Display.fillScreen(TFT_BLACK);
+        M5.Display.setTextColor(TFT_DARKGREY);
+        M5.Display.setFont(FONT_MEDIUM);
+        M5.Display.setCursor(40, 55);
+        M5.Display.print("Sleeping...");
         delay(1000);
 
         // Disable WiFi to save power
         wifiDisable();
 
         // Turn off display
-        StickCP2.Display.sleep();
+        M5.Display.sleep();
 
         // Configure GPIO35 (power button) as wake source - wake on LOW (button press)
         esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, 0);
@@ -614,9 +624,9 @@ void loop() {
 void loadFoodsDatabase() {
     File file = LittleFS.open("/foods.json", "r");
     if (!file) {
-        StickCP2.Display.fillScreen(TFT_RED);
-        StickCP2.Display.setCursor(10, 50);
-        StickCP2.Display.print("No foods.json!");
+        M5.Display.fillScreen(TFT_RED);
+        M5.Display.setCursor(10, 50);
+        M5.Display.print("No foods.json!");
         while (1) delay(1000);
     }
 
@@ -626,12 +636,14 @@ void loadFoodsDatabase() {
     file.close();
 
     if (error) {
-        StickCP2.Display.fillScreen(TFT_RED);
-        StickCP2.Display.setCursor(10, 30);
-        StickCP2.Display.print("JSON Error!");
-        StickCP2.Display.setCursor(10, 60);
-        StickCP2.Display.setTextSize(1);
-        StickCP2.Display.print(error.c_str());
+        M5.Display.fillScreen(TFT_RED);
+        M5.Display.setFont(FONT_MEDIUM);
+        M5.Display.setTextColor(TFT_WHITE);
+        M5.Display.setCursor(10, 30);
+        M5.Display.print("JSON Error!");
+        M5.Display.setFont(FONT_SMALL);
+        M5.Display.setCursor(10, 60);
+        M5.Display.print(error.c_str());
         while (1) delay(1000);
     }
 
@@ -673,16 +685,16 @@ void filterFoodsByCategory(const String& categoryId) {
 }
 
 void drawMainMenu() {
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
     // Title
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setTextColor(TFT_GREEN);
-    StickCP2.Display.setCursor(5, 5);
-    StickCP2.Display.print("Safe Bite");
+    M5.Display.setFont(FONT_HEADER);
+    M5.Display.setTextColor(TFT_GREEN);
+    M5.Display.setCursor(5, 8);
+    M5.Display.print("Safe Bite");
 
     // Draw line under title
-    StickCP2.Display.drawLine(0, 25, 240, 25, TFT_DARKGREY);
+    M5.Display.drawLine(0, 28, 240, 28, TFT_DARKGREY);
 
     // Calculate total items
     // Online: Voice Search, Browse Foods, Settings (3 items)
@@ -691,289 +703,288 @@ void drawMainMenu() {
     int totalItems = online ? 3 : 2;
 
     // Draw menu items
-    int y = 35;
+    int y = 32;
     for (int i = 0; i < totalItems; i++) {
         if (i == currentIndex) {
             // Highlighted item - blue background
-            StickCP2.Display.fillRect(0, y - 2, 240, 20, TFT_BLUE);
-            StickCP2.Display.setTextColor(TFT_WHITE);
+            M5.Display.fillRect(0, y + 1, 240, 21, TFT_BLUE);
+            M5.Display.setTextColor(TFT_WHITE);
         } else {
-            StickCP2.Display.setTextColor(TFT_LIGHTGREY);
+            M5.Display.setTextColor(TFT_LIGHTGREY);
         }
 
-        StickCP2.Display.setTextSize(2);
-        StickCP2.Display.setCursor(10, y);
+        M5.Display.setFont(FONT_MEDIUM);
+        M5.Display.setCursor(10, y);
 
         if (online) {
             // Online mode: Voice Search, Browse Foods, Settings
             if (i == 0) {
-                StickCP2.Display.print(STR(STR_VOICE_SEARCH));
+                M5.Display.print(STR(STR_VOICE_SEARCH));
             } else if (i == 1) {
-                StickCP2.Display.print(STR(STR_BROWSE_FOODS));
+                M5.Display.print(STR(STR_BROWSE_FOODS));
             } else {
-                StickCP2.Display.print(STR(STR_SETTINGS));
+                M5.Display.print(STR(STR_SETTINGS));
             }
         } else {
             // Offline mode: Browse Foods, Settings
             if (i == 0) {
-                StickCP2.Display.print(STR(STR_BROWSE_FOODS));
+                M5.Display.print(STR(STR_BROWSE_FOODS));
             } else {
-                StickCP2.Display.print(STR(STR_SETTINGS));
+                M5.Display.print(STR(STR_SETTINGS));
             }
         }
-        y += 25;
+        y += 22;
     }
 
     // Navigation hint
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print(STR(STR_NAV_NEXT_SEL));
+    M5.Display.setTextColor(TFT_DARKGREY);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(5, 120);
+    M5.Display.print(STR(STR_NAV_NEXT_SEL));
 
     // WiFi indicator
     drawWifiIndicator();
 }
 
 void drawCategories() {
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
     // Title
-    StickCP2.Display.setTextColor(TFT_WHITE);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 5);
-    StickCP2.Display.print(STR(STR_TITLE));
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setFont(FONT_HEADER);
+    M5.Display.setCursor(5, 8);
+    M5.Display.print(STR(STR_TITLE));
 
     // Draw line under title
-    StickCP2.Display.drawLine(0, 18, 240, 18, TFT_DARKGREY);
+    M5.Display.drawLine(0, 28, 240, 28, TFT_DARKGREY);
 
-    // Calculate visible items (show 5 items max)
+    // Calculate visible items (show 4 items max)
     int startIdx = 0;
-    if (currentIndex >= 3) {
-        startIdx = currentIndex - 2;
-        if (startIdx + 5 > categoryCount) {
-            startIdx = categoryCount - 5;
+    if (currentIndex >= 2) {
+        startIdx = currentIndex - 1;
+        if (startIdx + 4 > categoryCount) {
+            startIdx = categoryCount - 4;
             if (startIdx < 0) startIdx = 0;
         }
     }
 
     // Draw category items
-    int y = 25;
-    for (int i = startIdx; i < min(startIdx + 5, categoryCount); i++) {
+    int y = 32;
+    for (int i = startIdx; i < min(startIdx + 4, categoryCount); i++) {
         if (i == currentIndex) {
             // Highlighted item
-            StickCP2.Display.fillRect(0, y - 2, 240, 20, TFT_BLUE);
-            StickCP2.Display.setTextColor(TFT_WHITE);
+            M5.Display.fillRect(0, y + 1, 240, 21, TFT_BLUE);
+            M5.Display.setTextColor(TFT_WHITE);
         } else {
-            StickCP2.Display.setTextColor(TFT_LIGHTGREY);
+            M5.Display.setTextColor(TFT_LIGHTGREY);
         }
 
-        StickCP2.Display.setTextSize(2);
-        StickCP2.Display.setCursor(10, y);
-        StickCP2.Display.print(getName(categories[i]));
+        M5.Display.setFont(FONT_MEDIUM);
+        M5.Display.setCursor(10, y);
+        M5.Display.print(getName(categories[i]));
         y += 22;
     }
 
     // Navigation hint
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print(STR(STR_NAV_NEXT_SEL));
-    StickCP2.Display.print("  ");
-    StickCP2.Display.print(STR(STR_NAV_BACK));
-
-    // WiFi indicator
-    drawWifiIndicator();
+    M5.Display.setTextColor(TFT_DARKGREY);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(5, 120);
+    M5.Display.print(STR(STR_NAV_NEXT_SEL));
+    M5.Display.print("  ");
+    M5.Display.print(STR(STR_NAV_BACK));
 }
 
 void drawFoods() {
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
     // Title - show category name
-    StickCP2.Display.setTextColor(TFT_WHITE);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 5);
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setFont(FONT_HEADER);
+    M5.Display.setCursor(5, 8);
 
     // Find category name
     for (int i = 0; i < categoryCount; i++) {
         if (categories[i].id == selectedCategory) {
-            StickCP2.Display.print(getName(categories[i]));
+            M5.Display.print(getName(categories[i]));
             break;
         }
     }
 
-    // Item count
-    StickCP2.Display.setCursor(180, 5);
-    StickCP2.Display.printf("%d/%d", currentIndex + 1, filteredCount);
+    // Item count (right-aligned)
+    char countBuf[10];
+    snprintf(countBuf, sizeof(countBuf), "%d/%d", currentIndex + 1, filteredCount);
+    int countW = M5.Display.textWidth(countBuf);
+    M5.Display.setCursor(235 - countW, 8);
+    M5.Display.print(countBuf);
 
     // Draw line under title
-    StickCP2.Display.drawLine(0, 18, 240, 18, TFT_DARKGREY);
+    M5.Display.drawLine(0, 28, 240, 28, TFT_DARKGREY);
 
-    // Calculate visible items
+    // Calculate visible items (show 4 items max)
     int startIdx = 0;
-    if (currentIndex >= 3) {
-        startIdx = currentIndex - 2;
-        if (startIdx + 5 > filteredCount) {
-            startIdx = filteredCount - 5;
+    if (currentIndex >= 2) {
+        startIdx = currentIndex - 1;
+        if (startIdx + 4 > filteredCount) {
+            startIdx = filteredCount - 4;
             if (startIdx < 0) startIdx = 0;
         }
     }
 
     // Draw foods
-    int y = 25;
-    for (int i = startIdx; i < min(startIdx + 5, filteredCount); i++) {
+    M5.Display.setFont(FONT_MEDIUM);
+    int y = 32;
+    for (int i = startIdx; i < min(startIdx + 4, filteredCount); i++) {
         if (i == currentIndex) {
             // Highlighted item
-            StickCP2.Display.fillRect(0, y - 2, 240, 20, TFT_BLUE);
-            StickCP2.Display.setTextColor(TFT_WHITE);
+            M5.Display.fillRect(0, y + 1, 240, 21, TFT_BLUE);
+            M5.Display.setTextColor(TFT_WHITE);
         } else {
-            StickCP2.Display.setTextColor(TFT_LIGHTGREY);
+            M5.Display.setTextColor(TFT_LIGHTGREY);
         }
 
-        StickCP2.Display.setTextSize(2);
-        StickCP2.Display.setCursor(10, y);
+        M5.Display.setCursor(10, y);
 
         String name = getName(*filteredFoods[i]);
         if (i == currentIndex) {
             // Highlighted item: use scrolling
-            StickCP2.Display.print(getScrolledText(name));
+            M5.Display.print(getScrolledText(name));
         } else {
-            // Non-highlighted: truncate as before
-            if (name.length() > MAX_DISPLAY_CHARS) {
-                name = name.substring(0, MAX_DISPLAY_CHARS - 1) + "..";
+            // Non-highlighted: truncate with ellipsis if too wide
+            if (M5.Display.textWidth(name.c_str()) > SCROLL_AREA_WIDTH) {
+                int ellipsisW = M5.Display.textWidth("..");
+                int len = M5.Display.textLength(name.c_str(), SCROLL_AREA_WIDTH - ellipsisW);
+                name = name.substring(0, len) + "..";
             }
-            StickCP2.Display.print(name);
+            M5.Display.print(name);
         }
         y += 22;
     }
 
     // Navigation hint
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print(STR(STR_NAV_NEXT_SEL));
-
-    // WiFi indicator
-    drawWifiIndicator();
+    M5.Display.setTextColor(TFT_DARKGREY);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(5, 120);
+    M5.Display.print(STR(STR_NAV_NEXT_SEL));
 }
 
 void drawProcessing() {
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
-    // "Voice Search" label at top (small, dark)
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 5);
-    StickCP2.Display.print(STR(STR_VOICE_SEARCH));
+    // Header - consistent with other screens
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setFont(FONT_HEADER);
+    M5.Display.setCursor(5, 8);
+    M5.Display.print(STR(STR_VOICE_SEARCH));
+
+    M5.Display.drawLine(0, 28, 240, 28, TFT_DARKGREY);
 
     // "Processing..." centred in cyan
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setTextColor(TFT_CYAN);
-    StickCP2.Display.setCursor(10, 55);
-    StickCP2.Display.print(STR(STR_PROCESSING));
-
-    drawWifiIndicator();
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setTextColor(TFT_CYAN);
+    M5.Display.setCursor(10, 55);
+    M5.Display.print(STR(STR_PROCESSING));
 }
 
 void drawError(const char* title, const char* detail) {
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setTextColor(TFT_RED);
-    StickCP2.Display.setCursor(10, 30);
-    StickCP2.Display.print(title);
+    // Header - consistent with other screens
+    M5.Display.setFont(FONT_HEADER);
+    M5.Display.setTextColor(TFT_RED);
+    M5.Display.setCursor(5, 8);
+    M5.Display.print(title);
 
-    StickCP2.Display.setTextColor(TFT_WHITE);
-    StickCP2.Display.setCursor(10, 60);
-    StickCP2.Display.print(detail);
+    M5.Display.drawLine(0, 28, 240, 28, TFT_DARKGREY);
 
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print(STR(STR_NAV_BACK));
+    // Detail text
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setCursor(10, 40);
+    M5.Display.print(detail);
+
+    // Hint - consistent with other screens
+    M5.Display.setTextColor(TFT_DARKGREY);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(5, 120);
+    M5.Display.print(STR(STR_NAV_BACK));
 }
 
 void drawResult() {
     Food* food = filteredFoods[currentIndex];
 
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
     // Food name at top
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setTextColor(TFT_WHITE);
-    StickCP2.Display.setCursor(10, 8);
+    M5.Display.setFont(FONT_HEADER);
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setCursor(10, 8);
 
     String name = getName(*food);
-    StickCP2.Display.print(getScrolledText(name));
+    M5.Display.print(getScrolledText(name));
 
     // FODMAP section
     uint16_t fodmapColor = getFodmapColor(food->fodmap);
-    StickCP2.Display.fillRect(0, 35, 240, 40, fodmapColor);
+    M5.Display.fillRect(0, 35, 240, 40, fodmapColor);
 
     // FODMAP text - dark text on light backgrounds
     if (fodmapColor == TFT_YELLOW || fodmapColor == TFT_GREEN) {
-        StickCP2.Display.setTextColor(TFT_BLACK);
+        M5.Display.setTextColor(TFT_BLACK);
     } else {
-        StickCP2.Display.setTextColor(TFT_WHITE);
+        M5.Display.setTextColor(TFT_WHITE);
     }
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setCursor(10, 45);
-    StickCP2.Display.print(STR_FODMAP_LABEL);
-    StickCP2.Display.print(getFodmapLabel(food->fodmap));
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setCursor(10, 45);
+    M5.Display.print(STR_FODMAP_LABEL);
+    M5.Display.print(getFodmapLabel(food->fodmap));
 
     // Gluten section
     uint16_t glutenColor = food->gluten ? TFT_RED : TFT_GREEN;
-    StickCP2.Display.fillRect(0, 80, 240, 40, glutenColor);
+    M5.Display.fillRect(0, 80, 240, 40, glutenColor);
 
     // Dark text on green background for readability
-    StickCP2.Display.setTextColor(food->gluten ? TFT_WHITE : TFT_BLACK);
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setCursor(10, 90);
-    StickCP2.Display.print(STR_GLUTEN_LABEL);
-    StickCP2.Display.print(food->gluten ? STR(STR_YES) : STR(STR_NO));
+    M5.Display.setTextColor(food->gluten ? TFT_WHITE : TFT_BLACK);
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setCursor(10, 90);
+    M5.Display.print(STR_GLUTEN_LABEL);
+    M5.Display.print(food->gluten ? STR(STR_YES) : STR(STR_NO));
 
     // Back hint
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print(STR(STR_NAV_BACK));
-
-    // WiFi indicator
-    drawWifiIndicator();
+    M5.Display.setTextColor(TFT_DARKGREY);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(5, 120);
+    M5.Display.print(STR(STR_NAV_BACK));
 }
 
 void drawSettings() {
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
     // Title
-    StickCP2.Display.setTextColor(TFT_WHITE);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 5);
-    StickCP2.Display.print(STR(STR_SETTINGS));
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setFont(FONT_HEADER);
+    M5.Display.setCursor(5, 8);
+    M5.Display.print(STR(STR_SETTINGS));
 
-    StickCP2.Display.drawLine(0, 18, 240, 18, TFT_DARKGREY);
+    M5.Display.drawLine(0, 28, 240, 28, TFT_DARKGREY);
 
     // Language option (highlighted)
-    StickCP2.Display.fillRect(0, 25, 240, 20, TFT_BLUE);
-    StickCP2.Display.setTextColor(TFT_WHITE);
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setCursor(10, 27);
-    StickCP2.Display.print(STR(STR_LANGUAGE));
+    M5.Display.fillRect(0, 35, 240, 18, TFT_BLUE);
+    M5.Display.setTextColor(TFT_WHITE);
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setCursor(10, 32);
+    M5.Display.print(STR(STR_LANGUAGE));
 
     // Current language value
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setTextColor(TFT_CYAN);
-    StickCP2.Display.setCursor(10, 55);
-    StickCP2.Display.print("> ");
-    StickCP2.Display.print(STR(STR_LANG_NAME));
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setTextColor(TFT_CYAN);
+    M5.Display.setCursor(10, 55);
+    M5.Display.print("> ");
+    M5.Display.print(STR(STR_LANG_NAME));
 
     // Navigation hint
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print(STR(STR_NAV_SETTINGS));
-
-    // WiFi indicator
-    drawWifiIndicator();
+    M5.Display.setTextColor(TFT_DARKGREY);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(5, 120);
+    M5.Display.print(STR(STR_NAV_SETTINGS));
 }
 
 uint16_t getFodmapColor(const String& level) {

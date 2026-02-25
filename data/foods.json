@@ -8,8 +8,8 @@
   "categories": [
     {"id": "fruits", "name_pt": "Frutas", "name_en": "Fruits"},
     {"id": "vegetables", "name_pt": "Legumes", "name_en": "Vegetables"},
-    {"id": "proteins", "name_pt": "Proteinas", "name_en": "Proteins"},
-    {"id": "dairy", "name_pt": "Laticinios", "name_en": "Dairy"},
+    {"id": "proteins", "name_pt": "Proteínas", "name_en": "Proteins"},
+    {"id": "dairy", "name_pt": "Laticínios", "name_en": "Dairy"},
     {"id": "grains", "name_pt": "Cereais", "name_en": "Grains"},
     {"id": "drinks", "name_pt": "Bebidas", "name_en": "Drinks"},
     {"id": "snacks", "name_pt": "Snacks", "name_en": "Snacks"},
@@ -17,7 +17,7 @@
   ],
   "foods": [
     {
-      "name_pt": "Maca",
+      "name_pt": "Maçã",
       "name_en": "Apple",
       "category": "fruits",
       "fodmap": "high",
@@ -66,14 +66,14 @@
       "gluten": false
     },
     {
-      "name_pt": "Melao",
+      "name_pt": "Melão",
       "name_en": "Cantaloupe",
       "category": "fruits",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Ananas",
+      "name_pt": "Ananás",
       "name_en": "Pineapple",
       "category": "fruits",
       "fodmap": "low",
@@ -94,7 +94,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Pessego",
+      "name_pt": "Pêssego",
       "name_en": "Peach",
       "category": "fruits",
       "fodmap": "high",
@@ -150,7 +150,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Limao",
+      "name_pt": "Limão",
       "name_en": "Lemon",
       "category": "fruits",
       "fodmap": "low",
@@ -241,7 +241,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Brocolos",
+      "name_pt": "Brócolos",
       "name_en": "Broccoli",
       "category": "vegetables",
       "fodmap": "moderate",
@@ -276,7 +276,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Alho frances",
+      "name_pt": "Alho francês",
       "name_en": "Leek",
       "category": "vegetables",
       "fodmap": "high",
@@ -304,7 +304,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Abobora",
+      "name_pt": "Abóbora",
       "name_en": "Pumpkin",
       "category": "vegetables",
       "fodmap": "low",
@@ -332,21 +332,21 @@
       "gluten": false
     },
     {
-      "name_pt": "Feijao verde",
+      "name_pt": "Feijão verde",
       "name_en": "Green beans",
       "category": "vegetables",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Feijao",
+      "name_pt": "Feijão",
       "name_en": "Beans",
       "category": "vegetables",
       "fodmap": "high",
       "gluten": false
     },
     {
-      "name_pt": "Grao de bico",
+      "name_pt": "Grão-de-bico",
       "name_en": "Chickpeas",
       "category": "vegetables",
       "fodmap": "high",
@@ -472,7 +472,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Salmao",
+      "name_pt": "Salmão",
       "name_en": "Salmon",
       "category": "proteins",
       "fodmap": "low",
@@ -500,7 +500,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Camarao",
+      "name_pt": "Camarão",
       "name_en": "Shrimp",
       "category": "proteins",
       "fodmap": "low",
@@ -521,7 +521,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Mexilhoes",
+      "name_pt": "Mexilhões",
       "name_en": "Mussels",
       "category": "proteins",
       "fodmap": "low",
@@ -556,7 +556,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Leite de amendoa",
+      "name_pt": "Leite de amêndoa",
       "name_en": "Almond milk",
       "category": "dairy",
       "fodmap": "low",
@@ -612,7 +612,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Queijo parmesao",
+      "name_pt": "Queijo parmesão",
       "name_en": "Parmesan",
       "category": "dairy",
       "fodmap": "low",
@@ -703,7 +703,7 @@
       "gluten": true
     },
     {
-      "name_pt": "Aveia sem gluten",
+      "name_pt": "Aveia sem glúten",
       "name_en": "Gluten-free oats",
       "category": "grains",
       "fodmap": "moderate",
@@ -717,21 +717,21 @@
       "gluten": true
     },
     {
-      "name_pt": "Pao de trigo",
+      "name_pt": "Pão de trigo",
       "name_en": "Wheat bread",
       "category": "grains",
       "fodmap": "high",
       "gluten": true
     },
     {
-      "name_pt": "Pao sem gluten",
+      "name_pt": "Pão sem glúten",
       "name_en": "Gluten-free bread",
       "category": "grains",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Pao de espelta",
+      "name_pt": "Pão de espelta",
       "name_en": "Spelt bread",
       "category": "grains",
       "fodmap": "moderate",
@@ -745,7 +745,7 @@
       "gluten": true
     },
     {
-      "name_pt": "Massa sem gluten",
+      "name_pt": "Massa sem glúten",
       "name_en": "Gluten-free pasta",
       "category": "grains",
       "fodmap": "low",
@@ -815,49 +815,49 @@
       "gluten": false
     },
     {
-      "name_pt": "Farinha de amendoa",
+      "name_pt": "Farinha de amêndoa",
       "name_en": "Almond flour",
       "category": "grains",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Cereais de pequeno-almoco",
+      "name_pt": "Cereais de pequeno-almoço",
       "name_en": "Breakfast cereal",
       "category": "grains",
       "fodmap": "high",
       "gluten": true
     },
     {
-      "name_pt": "Agua",
+      "name_pt": "Água",
       "name_en": "Water",
       "category": "drinks",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Cha preto",
+      "name_pt": "Chá preto",
       "name_en": "Black tea",
       "category": "drinks",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Cha verde",
+      "name_pt": "Chá verde",
       "name_en": "Green tea",
       "category": "drinks",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Cha de camomila",
+      "name_pt": "Chá de camomila",
       "name_en": "Chamomile tea",
       "category": "drinks",
       "fodmap": "high",
       "gluten": false
     },
     {
-      "name_pt": "Cafe",
+      "name_pt": "Café",
       "name_en": "Coffee",
       "category": "drinks",
       "fodmap": "low",
@@ -871,7 +871,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Sumo de maca",
+      "name_pt": "Sumo de maçã",
       "name_en": "Apple juice",
       "category": "drinks",
       "fodmap": "high",
@@ -1011,7 +1011,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Amendoas",
+      "name_pt": "Amêndoas",
       "name_en": "Almonds",
       "category": "snacks",
       "fodmap": "low",
@@ -1032,7 +1032,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Pistacios",
+      "name_pt": "Pistácios",
       "name_en": "Pistachios",
       "category": "snacks",
       "fodmap": "high",
@@ -1046,7 +1046,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Sementes de abobora",
+      "name_pt": "Sementes de abóbora",
       "name_en": "Pumpkin seeds",
       "category": "snacks",
       "fodmap": "low",
@@ -1060,7 +1060,7 @@
       "gluten": true
     },
     {
-      "name_pt": "Hamburguer",
+      "name_pt": "Hambúrguer",
       "name_en": "Hamburger",
       "category": "snacks",
       "fodmap": "moderate",
@@ -1095,7 +1095,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Oleo de coco",
+      "name_pt": "Óleo de coco",
       "name_en": "Coconut oil",
       "category": "condiments",
       "fodmap": "low",
@@ -1109,7 +1109,7 @@
       "gluten": false
     },
     {
-      "name_pt": "Vinagre balsamico",
+      "name_pt": "Vinagre balsâmico",
       "name_en": "Balsamic vinegar",
       "category": "condiments",
       "fodmap": "moderate",
@@ -1158,14 +1158,14 @@
       "gluten": false
     },
     {
-      "name_pt": "Acucar",
+      "name_pt": "Açúcar",
       "name_en": "Sugar",
       "category": "condiments",
       "fodmap": "low",
       "gluten": false
     },
     {
-      "name_pt": "Xarope de acer",
+      "name_pt": "Xarope de ácer",
       "name_en": "Maple syrup",
       "category": "condiments",
       "fodmap": "low",

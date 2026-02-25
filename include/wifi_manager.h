@@ -25,7 +25,7 @@ enum ConnectionMode {
 
 // Indicator position
 #define WIFI_INDICATOR_X  225
-#define WIFI_INDICATOR_Y  5
+#define WIFI_INDICATOR_Y  11
 #define WIFI_INDICATOR_RADIUS  5
 
 // Function declarations

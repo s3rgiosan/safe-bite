@@ -1,8 +1,15 @@
 #include "audio_manager.h"
-#include "M5StickCPlus2.h"
-#include "wifi_manager.h"
+#include <M5Unified.h>
 #include "language.h"
 #include <esp_heap_caps.h>
+#include "fonts/DejaVuSans6pt_Latin.h"
+#include "fonts/DejaVuSans8pt_Latin.h"
+#include "fonts/DejaVuSans9pt_Latin.h"
+
+// DejaVu proportional font aliases (custom: ASCII + Latin-1, U+0020–U+00FF)
+#define FONT_SMALL  &DejaVuSans6pt8b
+#define FONT_HEADER &DejaVuSans8pt8b
+#define FONT_MEDIUM &DejaVuSans9pt8b
 
 // Recording state
 static AudioState currentAudioState = AUDIO_IDLE;
@@ -151,11 +158,11 @@ bool audioStartRecording() {
     lastBarUpdateTime = 0;
 
     // Start microphone
-    auto mic_cfg = StickCP2.Mic.config();
+    auto mic_cfg = M5.Mic.config();
     mic_cfg.sample_rate = AUDIO_SAMPLE_RATE;
     mic_cfg.magnification = 32;  // Amplification (higher to compensate for 8kHz sample rate)
-    StickCP2.Mic.config(mic_cfg);
-    StickCP2.Mic.begin();
+    M5.Mic.config(mic_cfg);
+    M5.Mic.begin();
 
     currentAudioState = AUDIO_RECORDING;
 
@@ -172,7 +179,7 @@ void audioUpdate() {
 
     // Check if we've recorded enough samples
     if (samplesRecorded >= AUDIO_BUFFER_SAMPLES) {
-        StickCP2.Mic.end();
+        M5.Mic.end();
         currentAudioState = AUDIO_COMPLETE;
         return;
     }
@@ -182,7 +189,7 @@ void audioUpdate() {
     size_t toRecord = (remaining < SAMPLES_PER_CHUNK) ? remaining : SAMPLES_PER_CHUNK;
 
     // Record a chunk
-    if (StickCP2.Mic.record(tempBuffer, toRecord, AUDIO_SAMPLE_RATE)) {
+    if (M5.Mic.record(tempBuffer, toRecord, AUDIO_SAMPLE_RATE)) {
         // Copy to WAV buffer
         int16_t* audioData = (int16_t*)(wavBuffer + WAV_HEADER_SIZE);
         memcpy(&audioData[samplesRecorded], tempBuffer, toRecord * sizeof(int16_t));
@@ -248,7 +255,7 @@ size_t getWavBufferSize() {
 
 void audioStopRecording() {
     if (currentAudioState != AUDIO_RECORDING) return;
-    StickCP2.Mic.end();
+    M5.Mic.end();
 
     // Rewrite WAV header with actual recorded size
     uint32_t dataSize = samplesRecorded * sizeof(int16_t);
@@ -274,7 +281,7 @@ void audioStopRecording() {
 
 void audioReset() {
     if (currentAudioState == AUDIO_RECORDING) {
-        StickCP2.Mic.end();
+        M5.Mic.end();
     }
     samplesRecorded = 0;
     recDotVisible = true;
@@ -310,18 +317,15 @@ float getRecordingProgress() {
 
 // Initial full screen draw - called once when recording starts
 static void drawRecordingScreenInitial() {
-    StickCP2.Display.fillScreen(TFT_BLACK);
+    M5.Display.fillScreen(TFT_BLACK);
 
     // REC indicator (red dot + text) - initial state
-    StickCP2.Display.fillCircle(15, 12, 6, TFT_RED);
-    StickCP2.Display.setTextColor(TFT_RED);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(25, 8);
-    StickCP2.Display.print("REC");
+    M5.Display.fillCircle(15, 12, 6, TFT_RED);
+    M5.Display.setTextColor(TFT_RED);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(25, 8);
+    M5.Display.print("REC");
     lastRecDotState = true;
-
-    // WiFi indicator
-    drawWifiIndicator();
 
     // Bar area is left empty on initial draw (all zeros, just black)
 
@@ -330,36 +334,36 @@ static void drawRecordingScreenInitial() {
     if (secondsRemaining < 0) secondsRemaining = 0;
     if (secondsRemaining > AUDIO_DURATION_SEC) secondsRemaining = AUDIO_DURATION_SEC;
 
-    StickCP2.Display.setTextColor(TFT_YELLOW);
-    StickCP2.Display.setTextSize(2);
-    StickCP2.Display.setCursor(90, 108);
-    StickCP2.Display.print(secondsRemaining);
-    StickCP2.Display.print("s");
+    M5.Display.setTextColor(TFT_YELLOW);
+    M5.Display.setFont(FONT_MEDIUM);
+    M5.Display.setCursor(90, 108);
+    M5.Display.print(secondsRemaining);
+    M5.Display.print("s");
     lastSecondsDisplayed = secondsRemaining;
 
     // Hints - static, drawn once
-    StickCP2.Display.setTextColor(TFT_DARKGREY);
-    StickCP2.Display.setTextSize(1);
-    StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print("M5:Send  B:Cancel");
+    M5.Display.setTextColor(TFT_DARKGREY);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(5, 120);
+    M5.Display.print("M5:Send  B:Cancel");
 }
 
 // Partial screen update - only redraws changed elements (prevents flickering)
 static void updateRecordingScreen(bool updateDot, bool updateSeconds, bool updateBars) {
     if (updateDot) {
         // Clear just the dot area (small rectangle around the circle)
-        StickCP2.Display.fillRect(9, 6, 14, 14, TFT_BLACK);
+        M5.Display.fillRect(9, 6, 14, 14, TFT_BLACK);
 
         if (recDotVisible) {
-            StickCP2.Display.fillCircle(15, 12, 6, TFT_RED);
-            StickCP2.Display.setTextColor(TFT_RED);
+            M5.Display.fillCircle(15, 12, 6, TFT_RED);
+            M5.Display.setTextColor(TFT_RED);
         } else {
-            StickCP2.Display.setTextColor(TFT_DARKGREY);
+            M5.Display.setTextColor(TFT_DARKGREY);
         }
         // Redraw "REC" text with updated color
-        StickCP2.Display.setTextSize(1);
-        StickCP2.Display.setCursor(25, 8);
-        StickCP2.Display.print("REC");
+        M5.Display.setFont(FONT_SMALL);
+        M5.Display.setCursor(25, 8);
+        M5.Display.print("REC");
 
         lastRecDotState = recDotVisible;
     }
@@ -369,27 +373,27 @@ static void updateRecordingScreen(bool updateDot, bool updateSeconds, bool updat
             int x = i * (BAR_WIDTH + BAR_GAP);
             int barHeight = (barLevels[i] * BAR_AREA_HEIGHT) / 255;
             // Clear this bar's column
-            StickCP2.Display.fillRect(x, BAR_AREA_Y, BAR_WIDTH, BAR_AREA_HEIGHT, TFT_BLACK);
+            M5.Display.fillRect(x, BAR_AREA_Y, BAR_WIDTH, BAR_AREA_HEIGHT, TFT_BLACK);
             // Draw the bar (from baseline upward)
             if (barHeight > 0) {
-                StickCP2.Display.fillRect(x, BAR_BASELINE - barHeight, BAR_WIDTH, barHeight, TFT_GREEN);
+                M5.Display.fillRect(x, BAR_BASELINE - barHeight, BAR_WIDTH, barHeight, TFT_GREEN);
             }
         }
     }
 
     if (updateSeconds) {
-        // Clear just the seconds area (enough space for "6s" in size 2 font)
-        StickCP2.Display.fillRect(90, 108, 50, 16, TFT_BLACK);
+        // Clear just the seconds area (enough space for "6s" in DejaVu18)
+        M5.Display.fillRect(90, 108, 50, 18, TFT_BLACK);
 
         int seconds = (AUDIO_BUFFER_SAMPLES - samplesRecorded) / AUDIO_SAMPLE_RATE;
         if (seconds < 0) seconds = 0;
         if (seconds > AUDIO_DURATION_SEC) seconds = AUDIO_DURATION_SEC;
 
-        StickCP2.Display.setTextColor(TFT_YELLOW);
-        StickCP2.Display.setTextSize(2);
-        StickCP2.Display.setCursor(90, 108);
-        StickCP2.Display.print(seconds);
-        StickCP2.Display.print("s");
+        M5.Display.setTextColor(TFT_YELLOW);
+        M5.Display.setFont(FONT_MEDIUM);
+        M5.Display.setCursor(90, 108);
+        M5.Display.print(seconds);
+        M5.Display.print("s");
 
         lastSecondsDisplayed = seconds;
     }
