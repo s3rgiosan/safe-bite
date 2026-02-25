@@ -41,20 +41,8 @@ static void drawRecordingScreenInitial();
 static void updateRecordingScreen(bool updateDot, bool updateSeconds, bool updateBars);
 
 bool audioInit() {
-    // Calculate total buffer size (WAV header + audio data)
-    wavBufferSize = WAV_HEADER_SIZE + (AUDIO_BUFFER_SAMPLES * sizeof(int16_t));
-
-    // Allocate buffer in PSRAM if available, otherwise in regular heap
-    wavBuffer = (uint8_t*)heap_caps_malloc(wavBufferSize, MALLOC_CAP_8BIT);
-
-    if (wavBuffer == nullptr) {
-        currentAudioState = AUDIO_ERROR;
-        return false;
-    }
-
-    // Clear buffer
-    memset(wavBuffer, 0, wavBufferSize);
-
+    // Buffer is allocated on-demand in audioStartRecording()
+    // to keep heap free for WiFi/TLS when not recording
     currentAudioState = AUDIO_IDLE;
     return true;
 }
@@ -139,7 +127,7 @@ static void writeWavHeader() {
 }
 
 bool audioStartRecording() {
-    if (wavBuffer == nullptr) {
+    if (!audioAllocBuffer()) {
         currentAudioState = AUDIO_ERROR;
         return false;
     }
@@ -258,6 +246,32 @@ size_t getWavBufferSize() {
     return wavBufferSize;
 }
 
+void audioStopRecording() {
+    if (currentAudioState != AUDIO_RECORDING) return;
+    StickCP2.Mic.end();
+
+    // Rewrite WAV header with actual recorded size
+    uint32_t dataSize = samplesRecorded * sizeof(int16_t);
+    uint32_t fileSize = dataSize + WAV_HEADER_SIZE - 8;
+
+    // RIFF chunk size (offset 4)
+    wavBuffer[4] = (fileSize >> 0) & 0xFF;
+    wavBuffer[5] = (fileSize >> 8) & 0xFF;
+    wavBuffer[6] = (fileSize >> 16) & 0xFF;
+    wavBuffer[7] = (fileSize >> 24) & 0xFF;
+
+    // data chunk size (offset 40)
+    wavBuffer[40] = (dataSize >> 0) & 0xFF;
+    wavBuffer[41] = (dataSize >> 8) & 0xFF;
+    wavBuffer[42] = (dataSize >> 16) & 0xFF;
+    wavBuffer[43] = (dataSize >> 24) & 0xFF;
+
+    // Update buffer size to actual payload
+    wavBufferSize = WAV_HEADER_SIZE + dataSize;
+
+    currentAudioState = AUDIO_COMPLETE;
+}
+
 void audioReset() {
     if (currentAudioState == AUDIO_RECORDING) {
         StickCP2.Mic.end();
@@ -265,6 +279,26 @@ void audioReset() {
     samplesRecorded = 0;
     recDotVisible = true;
     currentAudioState = AUDIO_IDLE;
+}
+
+void audioFreeBuffer() {
+    if (wavBuffer != nullptr) {
+        heap_caps_free(wavBuffer);
+        wavBuffer = nullptr;
+        wavBufferSize = 0;
+    }
+}
+
+bool audioAllocBuffer() {
+    if (wavBuffer != nullptr) return true;  // already allocated
+    wavBufferSize = WAV_HEADER_SIZE + (AUDIO_BUFFER_SAMPLES * sizeof(int16_t));
+    wavBuffer = (uint8_t*)heap_caps_malloc(wavBufferSize, MALLOC_CAP_8BIT);
+    if (wavBuffer == nullptr) {
+        wavBufferSize = 0;
+        return false;
+    }
+    memset(wavBuffer, 0, wavBufferSize);
+    return true;
 }
 
 float getRecordingProgress() {
@@ -303,11 +337,11 @@ static void drawRecordingScreenInitial() {
     StickCP2.Display.print("s");
     lastSecondsDisplayed = secondsRemaining;
 
-    // Cancel hint - static, drawn once
+    // Hints - static, drawn once
     StickCP2.Display.setTextColor(TFT_DARKGREY);
     StickCP2.Display.setTextSize(1);
     StickCP2.Display.setCursor(5, 125);
-    StickCP2.Display.print("B: Cancel");
+    StickCP2.Display.print("M5:Send  B:Cancel");
 }
 
 // Partial screen update - only redraws changed elements (prevents flickering)

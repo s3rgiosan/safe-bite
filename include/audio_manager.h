@@ -27,7 +27,10 @@ bool isRecording();
 AudioState getAudioState();
 uint8_t* getWavBuffer();
 size_t getWavBufferSize();
+void audioStopRecording();
 void audioReset();
+void audioFreeBuffer();
+bool audioAllocBuffer();
 float getRecordingProgress();  // 0.0 to 1.0
 void drawRecordingScreen();
 

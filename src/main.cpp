@@ -5,6 +5,7 @@
 #include "language.h"
 #include "wifi_manager.h"
 #include "audio_manager.h"
+#include "mistral_client.h"
 
 // Language state
 uint8_t currentLang = LANG_EN;
@@ -38,6 +39,9 @@ const char* STR_VOICE_SEARCH[] = {"Voice Search", "Pesquisa Voz"};
 
 // Main menu strings
 const char* STR_BROWSE_FOODS[] = {"Browse Foods", "Ver Alimentos"};
+const char* STR_ERROR_API[]    = {"API Error", "Erro de API"};
+const char* STR_NOT_FOOD[]     = {"Not a food", "Nao e' alimento"};
+const char* STR_TRY_AGAIN[]    = {"Try again", "Tente novamente"};
 
 // Language functions
 void loadLanguage() {
@@ -64,7 +68,8 @@ enum MenuState {
     STATE_FOODS,
     STATE_RESULT,
     STATE_SETTINGS,
-    STATE_RECORDING
+    STATE_RECORDING,
+    STATE_AI_PROCESSING
 };
 
 // Food structure
@@ -97,6 +102,10 @@ int foodCount = 0;
 Food* filteredFoods[200];
 int filteredCount = 0;
 
+// Voice search result state
+static Food voiceResultFood;
+static bool voiceResultActive = false;
+
 // Display colors
 const uint16_t COLOR_LOW = TFT_GREEN;
 const uint16_t COLOR_MODERATE = TFT_YELLOW;
@@ -124,6 +133,8 @@ void drawCategories();
 void drawFoods();
 void drawResult();
 void drawSettings();
+void drawProcessing();
+void drawError(const char* title, const char* detail);
 void filterFoodsByCategory(const String& categoryId);
 uint16_t getFodmapColor(const String& level);
 String getFodmapLabel(const String& level);
@@ -190,6 +201,7 @@ const unsigned long PWR_DEBOUNCE = 200;  // 200ms debounce
 void setup() {
     auto cfg = M5.config();
     StickCP2.begin(cfg);
+    Serial.begin(115200);
     StickCP2.Display.setRotation(1);
     StickCP2.Display.fillScreen(TFT_BLACK);
 
@@ -295,6 +307,7 @@ void loop() {
             case STATE_SETTINGS:
             case STATE_RESULT:
             case STATE_RECORDING:
+            case STATE_AI_PROCESSING:
                 // No next action on these screens
                 break;
         }
@@ -375,7 +388,11 @@ void loop() {
                 // No action
                 break;
             case STATE_RECORDING:
-                // No action
+                // M5 confirms and sends audio early
+                audioStopRecording();
+                break;
+            case STATE_AI_PROCESSING:
+                // Blocking call in progress; unreachable but keeps switch exhaustive
                 break;
         }
     }
@@ -400,10 +417,19 @@ void loop() {
                 drawCategories();
                 break;
             case STATE_RESULT:
-                // Back to foods list
-                currentState = STATE_FOODS;
-                itemCount = filteredCount;
-                drawFoods();
+                if (voiceResultActive) {
+                    voiceResultActive = false;
+                    currentState = STATE_MAIN_MENU;
+                    currentIndex = 0;
+                    drawMainMenu();
+                } else {
+                    currentState = STATE_FOODS;
+                    itemCount = filteredCount;
+                    drawFoods();
+                }
+                break;
+            case STATE_AI_PROCESSING:
+                // Blocking call in progress; unreachable but keeps switch exhaustive
                 break;
             case STATE_SETTINGS:
                 // Back to main menu
@@ -427,12 +453,90 @@ void loop() {
 
         AudioState audioState = getAudioState();
         if (audioState == AUDIO_COMPLETE) {
-            // Recording done - for now, just go back to main menu
-            // In Phase 5, this will trigger API call
-            audioReset();
-            currentState = STATE_MAIN_MENU;
-            currentIndex = 0;
-            drawMainMenu();
+            uint8_t* wavData = getWavBuffer();
+            size_t   wavSize = getWavBufferSize();
+            audioReset();  // stops mic, preserves heap buffer
+
+            currentState = STATE_AI_PROCESSING;
+            drawProcessing();
+
+            Serial.printf("[VOICE] WAV size: %u bytes\n", wavSize);
+
+            // Save WAV to temp file so we can free the 96KB buffer before TLS
+            static const char* TMP_WAV = "/tmp.wav";
+            bool saved = false;
+            File tmpFile = LittleFS.open(TMP_WAV, "w");
+            if (tmpFile) {
+                size_t written = tmpFile.write(wavData, wavSize);
+                saved = (written == wavSize);
+                tmpFile.close();
+                Serial.printf("[VOICE] Saved to LittleFS: %u/%u bytes\n", written, wavSize);
+            } else {
+                Serial.println("[VOICE] Failed to open tmp.wav for writing");
+            }
+
+            // Free audio buffer — ~96KB back for TLS
+            audioFreeBuffer();
+            Serial.printf("[VOICE] Buffer freed. Free heap: %u\n", ESP.getFreeHeap());
+
+            MistralResult res;
+            res.success = false;
+            res.notFood = false;
+            res.fodmap = "unknown";
+            res.gluten = false;
+
+            if (!saved) {
+                res.errorMsg = "File save err";
+            } else {
+                // Step 1: Transcribe (streams from file, buffer is freed)
+                String sttError;
+                String transcript = mistralTranscribeFile(TMP_WAV, wavSize, sttError);
+                LittleFS.remove(TMP_WAV);
+
+                if (transcript.length() == 0) {
+                    res.errorMsg = sttError.length() > 0 ? sttError : "No transcript";
+                } else {
+                    res.transcribedText = transcript;
+                    // Step 2: Classify (only needs text string)
+                    String classifyError;
+                    String fodmapOut;
+                    bool glutenOut = false;
+                    bool notFood = false;
+                    if (mistralClassify(transcript, fodmapOut, glutenOut, notFood, classifyError)) {
+                        if (notFood) {
+                            res.notFood = true;
+                        } else {
+                            res.fodmap = fodmapOut;
+                            res.gluten = glutenOut;
+                            res.success = true;
+                        }
+                    } else {
+                        res.errorMsg = classifyError;
+                    }
+                }
+            }
+
+            if (res.success) {
+                voiceResultFood = { res.transcribedText, res.transcribedText, "", res.fodmap, res.gluten };
+                filteredFoods[0] = &voiceResultFood;
+                currentIndex = 0;
+                voiceResultActive = true;
+                currentState = STATE_RESULT;
+                resetScroll(res.transcribedText);
+                drawResult();
+            } else if (res.notFood) {
+                drawError(STR(STR_NOT_FOOD), STR(STR_TRY_AGAIN));
+                delay(2500);
+                currentState = STATE_MAIN_MENU;
+                currentIndex = 0;
+                drawMainMenu();
+            } else {
+                drawError(STR(STR_ERROR_API), res.errorMsg.c_str());
+                delay(2500);
+                currentState = STATE_MAIN_MENU;
+                currentIndex = 0;
+                drawMainMenu();
+            }
         } else if (audioState == AUDIO_ERROR) {
             // Audio error during recording - recover gracefully
             audioReset();
@@ -572,8 +676,8 @@ void drawMainMenu() {
     StickCP2.Display.fillScreen(TFT_BLACK);
 
     // Title
-    StickCP2.Display.setTextColor(TFT_GREEN);
     StickCP2.Display.setTextSize(2);
+    StickCP2.Display.setTextColor(TFT_GREEN);
     StickCP2.Display.setCursor(5, 5);
     StickCP2.Display.print("Safe Bite");
 
@@ -752,14 +856,50 @@ void drawFoods() {
     drawWifiIndicator();
 }
 
+void drawProcessing() {
+    StickCP2.Display.fillScreen(TFT_BLACK);
+
+    // "Voice Search" label at top (small, dark)
+    StickCP2.Display.setTextColor(TFT_DARKGREY);
+    StickCP2.Display.setTextSize(1);
+    StickCP2.Display.setCursor(5, 5);
+    StickCP2.Display.print(STR(STR_VOICE_SEARCH));
+
+    // "Processing..." centred in cyan
+    StickCP2.Display.setTextSize(2);
+    StickCP2.Display.setTextColor(TFT_CYAN);
+    StickCP2.Display.setCursor(10, 55);
+    StickCP2.Display.print(STR(STR_PROCESSING));
+
+    drawWifiIndicator();
+}
+
+void drawError(const char* title, const char* detail) {
+    StickCP2.Display.fillScreen(TFT_BLACK);
+
+    StickCP2.Display.setTextSize(2);
+    StickCP2.Display.setTextColor(TFT_RED);
+    StickCP2.Display.setCursor(10, 30);
+    StickCP2.Display.print(title);
+
+    StickCP2.Display.setTextColor(TFT_WHITE);
+    StickCP2.Display.setCursor(10, 60);
+    StickCP2.Display.print(detail);
+
+    StickCP2.Display.setTextColor(TFT_DARKGREY);
+    StickCP2.Display.setTextSize(1);
+    StickCP2.Display.setCursor(5, 125);
+    StickCP2.Display.print(STR(STR_NAV_BACK));
+}
+
 void drawResult() {
     Food* food = filteredFoods[currentIndex];
 
     StickCP2.Display.fillScreen(TFT_BLACK);
 
     // Food name at top
-    StickCP2.Display.setTextColor(TFT_WHITE);
     StickCP2.Display.setTextSize(2);
+    StickCP2.Display.setTextColor(TFT_WHITE);
     StickCP2.Display.setCursor(10, 8);
 
     String name = getName(*food);
@@ -820,8 +960,8 @@ void drawSettings() {
     StickCP2.Display.print(STR(STR_LANGUAGE));
 
     // Current language value
-    StickCP2.Display.setTextColor(TFT_CYAN);
     StickCP2.Display.setTextSize(2);
+    StickCP2.Display.setTextColor(TFT_CYAN);
     StickCP2.Display.setCursor(10, 55);
     StickCP2.Display.print("> ");
     StickCP2.Display.print(STR(STR_LANG_NAME));

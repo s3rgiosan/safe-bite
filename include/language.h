@@ -43,6 +43,9 @@ extern const char* STR_VOICE_SEARCH[];
 
 // Main menu strings
 extern const char* STR_BROWSE_FOODS[];
+extern const char* STR_ERROR_API[];
+extern const char* STR_NOT_FOOD[];
+extern const char* STR_TRY_AGAIN[];
 
 // Shared labels (same in both languages)
 #define STR_FODMAP_LABEL  "FODMAP: "
