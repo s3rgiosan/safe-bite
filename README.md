@@ -18,7 +18,7 @@ GLUTEN: NO 🟢
 - **Color-coded answers** — Red (avoid), Yellow (small portions), Green (safe)
 - **Kid-friendly** — Simple interface with just 2 buttons
 - **WiFi connectivity** — Non-blocking connection with visual status indicator
-- **Voice recording** — 6-second PDM microphone capture for voice search
+- **Voice recording** — 5-second PDM microphone capture with double-buffered flash streaming
 
 ## Hardware
 
@@ -107,11 +107,11 @@ If no `config.h` is present or WiFi fails, the device works in offline mode with
 When WiFi is connected, a "Voice Search" option appears at the top of the categories menu:
 
 1. Select "Voice Search" and press M5 button
-2. Speak your food query (6-second recording)
-3. Visual countdown shows recording progress
-4. Audio is captured as 8kHz mono WAV and sent to Mistral Voxtral for transcription
+2. Speak your food query (5-second recording)
+3. Visual countdown and waveform bars show recording progress
+4. Audio is captured as 16kHz mono WAV and sent to Mistral Voxtral for transcription
 
-The PDM microphone (SPM1423) captures speech at 8000 Hz sample rate with 16-bit depth.
+The PDM microphone (SPM1423) captures speech at 16000 Hz sample rate with 16-bit depth. A 32KB double-buffer streams audio to flash in real time — no large heap allocation needed.
 
 ## Costs
 

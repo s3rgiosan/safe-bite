@@ -31,7 +31,7 @@ Firmware and filesystem are **independent** — only re-flash what changed.
 
 ```
 src/main.cpp              # Main loop, state machine, UI rendering
-src/audio_manager.cpp     # Recording, WAV buffer, recording screen
+src/audio_manager.cpp     # Double-buffered recording, flash streaming, recording screen
 src/wifi_manager.cpp      # Non-blocking WiFi, status indicator
 include/audio_manager.h
 include/wifi_manager.h
@@ -47,9 +47,12 @@ data/foods.json           # 176 foods across 8 categories, uploaded to LittleFS
 Strings are `const char*` arrays indexed `[EN, PT]`. Use the `STR(arr)` macro everywhere — never hardcode UI strings.
 
 ### Audio recording
-- Sample rate: **8000 Hz**, duration: **6s**, buffer: **48000 samples** (16-bit PCM → WAV)
-- Chunk size: 240 samples (M5 mic recommended)
-- Countdown display is keyed to **`samplesRecorded`**, not wall-clock time — so it stays in sync with actual completion even when `mic.record()` calls fail
+- Sample rate: **16000 Hz**, duration: **5s**, total: **80000 samples** (16-bit PCM → WAV)
+- **Double-buffered**: 32KB buffer split into two 16KB halves (8000 samples each, 0.5s). DMA fills one half while the other is written to LittleFS flash — continuous capture, zero audio gaps
+- 10 half-chunks ping-pong to build the WAV file incrementally on flash (`/tmp.wav`)
+- Peak heap allocation: **32KB** (vs 160KB if monolithic) — fits even with fragmented heap
+- WiFi is disabled during recording to free heap, reconnected after
+- Countdown display is keyed to **`samplesRecorded`**, not wall-clock time — so it stays in sync with actual capture progress
 
 ### Recording screen rendering
 Partial updates only — the screen is broken into zones (REC dot, waveform bars, seconds counter) and each is redrawn independently to prevent flickering. Full redraw only on screen entry.
@@ -60,13 +63,12 @@ Non-blocking connection — never stalls the main loop. Status shown as a small 
 ## Display Layout (recording screen)
 
 ```
-[● REC]              [wifi]   ← row 0-24
-[  waveform bars  ]           ← rows 52-100
-[              Xs ]           ← rows 108-124  (countdown, yellow)
-[B: Cancel        ]           ← row 125       (hint, dark grey)
+[● REC]              [Xs]    ← row 0-18  (REC dot+text left, countdown right, both FONT_SMALL)
+[  waveform bars  ]          ← rows 52-100
+[M5:Send  B:Cancel]          ← row 120   (hint, dark grey)
 ```
 
-"Recording" text was removed — the blinking REC dot is sufficient.
+Blinking REC dot (red/grey at 500ms) + yellow countdown in the top-right corner. Waveform bars fill the middle. Hints at the bottom.
 
 ## Food Database
 
