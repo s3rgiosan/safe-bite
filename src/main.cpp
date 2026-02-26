@@ -341,11 +341,13 @@ void loop() {
                 // Offline: 0=Browse Foods, 1=Settings
                 if (isOnline()) {
                     if (currentIndex == 0) {
-                        // Voice Search selected - start recording
+                        // Voice Search selected - disable WiFi to free heap for audio buffer
+                        wifiDisable();
                         if (audioStartRecording()) {
                             currentState = STATE_RECORDING;
                         } else {
-                            // Audio init failed - show error briefly
+                            // Audio init failed - reconnect WiFi and show error
+                            wifiReconnect();
                             drawError("Audio Error", STR(STR_TRY_AGAIN));
                             delay(1500);
                             drawMainMenu();
@@ -454,6 +456,9 @@ void loop() {
             case STATE_RECORDING:
                 // Cancel recording, back to main menu
                 audioReset();
+                audioFreeBuffer();
+                LittleFS.remove(getWavFilePath());
+                wifiReconnect();
                 currentState = STATE_MAIN_MENU;
                 currentIndex = 0;
                 drawMainMenu();
@@ -467,31 +472,27 @@ void loop() {
 
         AudioState audioState = getAudioState();
         if (audioState == AUDIO_COMPLETE) {
-            uint8_t* wavData = getWavBuffer();
-            size_t   wavSize = getWavBufferSize();
-            audioReset();  // stops mic, preserves heap buffer
+            // WAV is already on flash — just grab the path and size
+            const char* wavPath = getWavFilePath();
+            size_t wavSize = getWavFileSize();
+
+            audioReset();
+            audioFreeBuffer();
 
             currentState = STATE_AI_PROCESSING;
             drawProcessing();
 
-            Serial.printf("[VOICE] WAV size: %u bytes\n", wavSize);
+            Serial.printf("[VOICE] WAV file: %s, %u bytes\n", wavPath, (unsigned)wavSize);
 
-            // Save WAV to temp file so we can free the 96KB buffer before TLS
-            static const char* TMP_WAV = "/tmp.wav";
-            bool saved = false;
-            File tmpFile = LittleFS.open(TMP_WAV, "w");
-            if (tmpFile) {
-                size_t written = tmpFile.write(wavData, wavSize);
-                saved = (written == wavSize);
-                tmpFile.close();
-                Serial.printf("[VOICE] Saved to LittleFS: %u/%u bytes\n", written, wavSize);
-            } else {
-                Serial.println("[VOICE] Failed to open tmp.wav for writing");
+            // Reconnect WiFi (was disabled to free heap for audio buffer)
+            wifiReconnect();
+            unsigned long wifiWait = millis();
+            while (!isOnline() && millis() - wifiWait < WIFI_CONNECTION_TIMEOUT) {
+                wifiUpdate();
+                delay(100);
             }
-
-            // Free audio buffer — ~96KB back for TLS
-            audioFreeBuffer();
-            Serial.printf("[VOICE] Buffer freed. Free heap: %u\n", ESP.getFreeHeap());
+            Serial.printf("[VOICE] WiFi: %s. Free heap: %u\n",
+                          isOnline() ? "connected" : "timeout", ESP.getFreeHeap());
 
             MistralResult res;
             res.success = false;
@@ -499,34 +500,30 @@ void loop() {
             res.fodmap = "unknown";
             res.gluten = false;
 
-            if (!saved) {
-                res.errorMsg = "File save err";
-            } else {
-                // Step 1: Transcribe (streams from file, buffer is freed)
-                String sttError;
-                String transcript = mistralTranscribeFile(TMP_WAV, wavSize, sttError);
-                LittleFS.remove(TMP_WAV);
+            // Step 1: Transcribe (streams from file)
+            String sttError;
+            String transcript = mistralTranscribeFile(wavPath, wavSize, sttError);
+            LittleFS.remove(wavPath);
 
-                if (transcript.length() == 0) {
-                    res.errorMsg = sttError.length() > 0 ? sttError : "No transcript";
-                } else {
-                    res.transcribedText = transcript;
-                    // Step 2: Classify (only needs text string)
-                    String classifyError;
-                    String fodmapOut;
-                    bool glutenOut = false;
-                    bool notFood = false;
-                    if (mistralClassify(transcript, fodmapOut, glutenOut, notFood, classifyError)) {
-                        if (notFood) {
-                            res.notFood = true;
-                        } else {
-                            res.fodmap = fodmapOut;
-                            res.gluten = glutenOut;
-                            res.success = true;
-                        }
+            if (transcript.length() == 0) {
+                res.errorMsg = sttError.length() > 0 ? sttError : "No transcript";
+            } else {
+                res.transcribedText = transcript;
+                // Step 2: Classify (only needs text string)
+                String classifyError;
+                String fodmapOut;
+                bool glutenOut = false;
+                bool notFood = false;
+                if (mistralClassify(transcript, fodmapOut, glutenOut, notFood, classifyError)) {
+                    if (notFood) {
+                        res.notFood = true;
                     } else {
-                        res.errorMsg = classifyError;
+                        res.fodmap = fodmapOut;
+                        res.gluten = glutenOut;
+                        res.success = true;
                     }
+                } else {
+                    res.errorMsg = classifyError;
                 }
             }
 
@@ -554,6 +551,9 @@ void loop() {
         } else if (audioState == AUDIO_ERROR) {
             // Audio error during recording - recover gracefully
             audioReset();
+            audioFreeBuffer();
+            LittleFS.remove(getWavFilePath());
+            wifiReconnect();
             drawError("Audio Error", STR(STR_TRY_AGAIN));
             delay(1500);
             currentState = STATE_MAIN_MENU;
@@ -618,7 +618,8 @@ void loop() {
         esp_deep_sleep_start();
     }
 
-    delay(50);
+    // Shorter delay during recording for smoother UI updates
+    delay(currentState == STATE_RECORDING ? 10 : 50);
 }
 
 void loadFoodsDatabase() {

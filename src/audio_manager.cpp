@@ -1,5 +1,6 @@
 #include "audio_manager.h"
 #include <M5Unified.h>
+#include <LittleFS.h>
 #include "language.h"
 #include <esp_heap_caps.h>
 #include "fonts/DejaVuSans6pt_Latin.h"
@@ -13,14 +14,23 @@
 
 // Recording state
 static AudioState currentAudioState = AUDIO_IDLE;
-static uint8_t* wavBuffer = nullptr;
-static size_t wavBufferSize = 0;
-static size_t samplesRecorded = 0;
+static int16_t* chunkBuffer = nullptr;  // 32KB total, split into two 16KB halves
+static File wavFile;
+static size_t totalSamplesWritten = 0;
+static unsigned long chunkStartTime = 0;
+static size_t wavFileSize = 0;
+static const char* WAV_FILE_PATH = "/tmp.wav";
+
+static size_t samplesRecorded = 0;  // total progress across all chunks
 static unsigned long recordingStartTime = 0;
 
-// Chunk recording
-static const int SAMPLES_PER_CHUNK = 240;  // M5 mic recommended chunk size
-static int16_t tempBuffer[SAMPLES_PER_CHUNK];
+// Double-buffer: ping-pong two halves so DMA and flash write overlap
+static const size_t HALF_SAMPLES = AUDIO_CHUNK_SAMPLES / 2;   // 8000 (0.5s)
+static const size_t HALF_SIZE    = HALF_SAMPLES * sizeof(int16_t);  // 16000 bytes
+static const int    TOTAL_HALVES = AUDIO_TOTAL_CHUNKS * 2;    // 10
+static int16_t* recBuf  = nullptr;  // half currently being recorded into
+static int16_t* writeBuf = nullptr; // half just completed, pending flash write
+static int halvesCompleted = 0;
 
 // UI state for blinking REC dot
 static bool recDotVisible = true;
@@ -42,110 +52,103 @@ static uint8_t barLevels[NUM_BARS] = {0};
 static unsigned long lastBarUpdateTime = 0;
 static const unsigned long BAR_UPDATE_INTERVAL = 80;  // ms
 
+// Audio level: number of samples to scan for peak (~30ms window)
+static const size_t LEVEL_WINDOW = AUDIO_SAMPLE_RATE / 33;
+
 // Forward declarations
-static void writeWavHeader();
+static void writeWavHeader(size_t dataSize);
 static void drawRecordingScreenInitial();
 static void updateRecordingScreen(bool updateDot, bool updateSeconds, bool updateBars);
 
 bool audioInit() {
-    // Buffer is allocated on-demand in audioStartRecording()
-    // to keep heap free for WiFi/TLS when not recording
     currentAudioState = AUDIO_IDLE;
     return true;
 }
 
-static void writeWavHeader() {
-    if (wavBuffer == nullptr) return;
+static void writeWavHeader(size_t dataSize) {
+    if (!wavFile) return;
 
-    uint32_t dataSize = AUDIO_BUFFER_SAMPLES * sizeof(int16_t);
+    uint8_t header[WAV_HEADER_SIZE];
     uint32_t fileSize = dataSize + WAV_HEADER_SIZE - 8;
     uint32_t byteRate = AUDIO_SAMPLE_RATE * sizeof(int16_t);
     uint16_t blockAlign = sizeof(int16_t);
 
     // RIFF header
-    wavBuffer[0] = 'R';
-    wavBuffer[1] = 'I';
-    wavBuffer[2] = 'F';
-    wavBuffer[3] = 'F';
-
-    // File size - 8
-    wavBuffer[4] = (fileSize >> 0) & 0xFF;
-    wavBuffer[5] = (fileSize >> 8) & 0xFF;
-    wavBuffer[6] = (fileSize >> 16) & 0xFF;
-    wavBuffer[7] = (fileSize >> 24) & 0xFF;
+    header[0] = 'R'; header[1] = 'I'; header[2] = 'F'; header[3] = 'F';
+    header[4] = (fileSize >> 0) & 0xFF;
+    header[5] = (fileSize >> 8) & 0xFF;
+    header[6] = (fileSize >> 16) & 0xFF;
+    header[7] = (fileSize >> 24) & 0xFF;
 
     // WAVE
-    wavBuffer[8] = 'W';
-    wavBuffer[9] = 'A';
-    wavBuffer[10] = 'V';
-    wavBuffer[11] = 'E';
+    header[8] = 'W'; header[9] = 'A'; header[10] = 'V'; header[11] = 'E';
 
     // fmt chunk
-    wavBuffer[12] = 'f';
-    wavBuffer[13] = 'm';
-    wavBuffer[14] = 't';
-    wavBuffer[15] = ' ';
-
-    // fmt chunk size (16 for PCM)
-    wavBuffer[16] = 16;
-    wavBuffer[17] = 0;
-    wavBuffer[18] = 0;
-    wavBuffer[19] = 0;
-
-    // Audio format (1 = PCM)
-    wavBuffer[20] = 1;
-    wavBuffer[21] = 0;
-
-    // Channels (1 = mono)
-    wavBuffer[22] = 1;
-    wavBuffer[23] = 0;
+    header[12] = 'f'; header[13] = 'm'; header[14] = 't'; header[15] = ' ';
+    header[16] = 16; header[17] = 0; header[18] = 0; header[19] = 0;  // chunk size
+    header[20] = 1; header[21] = 0;  // PCM format
+    header[22] = 1; header[23] = 0;  // mono
 
     // Sample rate
-    wavBuffer[24] = (AUDIO_SAMPLE_RATE >> 0) & 0xFF;
-    wavBuffer[25] = (AUDIO_SAMPLE_RATE >> 8) & 0xFF;
-    wavBuffer[26] = (AUDIO_SAMPLE_RATE >> 16) & 0xFF;
-    wavBuffer[27] = (AUDIO_SAMPLE_RATE >> 24) & 0xFF;
+    header[24] = (AUDIO_SAMPLE_RATE >> 0) & 0xFF;
+    header[25] = (AUDIO_SAMPLE_RATE >> 8) & 0xFF;
+    header[26] = (AUDIO_SAMPLE_RATE >> 16) & 0xFF;
+    header[27] = (AUDIO_SAMPLE_RATE >> 24) & 0xFF;
 
     // Byte rate
-    wavBuffer[28] = (byteRate >> 0) & 0xFF;
-    wavBuffer[29] = (byteRate >> 8) & 0xFF;
-    wavBuffer[30] = (byteRate >> 16) & 0xFF;
-    wavBuffer[31] = (byteRate >> 24) & 0xFF;
+    header[28] = (byteRate >> 0) & 0xFF;
+    header[29] = (byteRate >> 8) & 0xFF;
+    header[30] = (byteRate >> 16) & 0xFF;
+    header[31] = (byteRate >> 24) & 0xFF;
 
-    // Block align (2)
-    wavBuffer[32] = blockAlign & 0xFF;
-    wavBuffer[33] = (blockAlign >> 8) & 0xFF;
+    // Block align
+    header[32] = blockAlign & 0xFF;
+    header[33] = (blockAlign >> 8) & 0xFF;
 
-    // Bits per sample (16)
-    wavBuffer[34] = 16;
-    wavBuffer[35] = 0;
+    // Bits per sample
+    header[34] = 16; header[35] = 0;
 
     // data chunk
-    wavBuffer[36] = 'd';
-    wavBuffer[37] = 'a';
-    wavBuffer[38] = 't';
-    wavBuffer[39] = 'a';
+    header[36] = 'd'; header[37] = 'a'; header[38] = 't'; header[39] = 'a';
+    header[40] = (dataSize >> 0) & 0xFF;
+    header[41] = (dataSize >> 8) & 0xFF;
+    header[42] = (dataSize >> 16) & 0xFF;
+    header[43] = (dataSize >> 24) & 0xFF;
 
-    // Data size
-    wavBuffer[40] = (dataSize >> 0) & 0xFF;
-    wavBuffer[41] = (dataSize >> 8) & 0xFF;
-    wavBuffer[42] = (dataSize >> 16) & 0xFF;
-    wavBuffer[43] = (dataSize >> 24) & 0xFF;
+    wavFile.seek(0);
+    wavFile.write(header, WAV_HEADER_SIZE);
 }
 
 bool audioStartRecording() {
-    if (!audioAllocBuffer()) {
+    // Allocate chunk buffer (32KB)
+    if (chunkBuffer == nullptr) {
+        Serial.printf("[AUDIO] Requesting chunk buffer %u bytes, free heap=%u, largest block=%u\n",
+                      (unsigned)AUDIO_CHUNK_BUFFER_SIZE, ESP.getFreeHeap(),
+                      heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+        chunkBuffer = (int16_t*)heap_caps_malloc(AUDIO_CHUNK_BUFFER_SIZE, MALLOC_CAP_8BIT);
+        if (chunkBuffer == nullptr) {
+            Serial.println("[AUDIO] Chunk buffer allocation FAILED");
+            currentAudioState = AUDIO_ERROR;
+            return false;
+        }
+        Serial.printf("[AUDIO] Chunk buffer allocated at %p\n", chunkBuffer);
+    }
+
+    // Open WAV file for writing
+    wavFile = LittleFS.open(WAV_FILE_PATH, "w");
+    if (!wavFile) {
+        Serial.println("[AUDIO] Failed to open tmp.wav for writing");
         currentAudioState = AUDIO_ERROR;
         return false;
     }
 
-    // Clear audio data portion
-    memset(wavBuffer + WAV_HEADER_SIZE, 0, AUDIO_BUFFER_SAMPLES * sizeof(int16_t));
-
-    // Write WAV header
-    writeWavHeader();
+    // Write placeholder WAV header (will be rewritten at end with actual size)
+    size_t maxDataSize = AUDIO_TOTAL_SAMPLES * sizeof(int16_t);
+    writeWavHeader(maxDataSize);
 
     // Reset recording state
+    totalSamplesWritten = 0;
+    halvesCompleted = 0;
     samplesRecorded = 0;
     recordingStartTime = millis();
     recDotVisible = true;
@@ -157,12 +160,20 @@ bool audioStartRecording() {
     memset(barLevels, 0, sizeof(barLevels));
     lastBarUpdateTime = 0;
 
-    // Start microphone
+    // Configure and start microphone
     auto mic_cfg = M5.Mic.config();
     mic_cfg.sample_rate = AUDIO_SAMPLE_RATE;
-    mic_cfg.magnification = 32;  // Amplification (higher to compensate for 8kHz sample rate)
+    mic_cfg.magnification = 16;
     M5.Mic.config(mic_cfg);
     M5.Mic.begin();
+
+    // Set up double-buffer halves and start first DMA
+    int16_t* bufA = chunkBuffer;
+    recBuf = bufA;
+    writeBuf = nullptr;
+    memset(chunkBuffer, 0, AUDIO_CHUNK_BUFFER_SIZE);
+    M5.Mic.record(recBuf, HALF_SAMPLES, AUDIO_SAMPLE_RATE);
+    chunkStartTime = millis();
 
     currentAudioState = AUDIO_RECORDING;
 
@@ -177,33 +188,70 @@ void audioUpdate() {
         return;
     }
 
-    // Check if we've recorded enough samples
-    if (samplesRecorded >= AUDIO_BUFFER_SAMPLES) {
-        M5.Mic.end();
-        currentAudioState = AUDIO_COMPLETE;
-        return;
-    }
-
-    // Calculate how many samples we can still record
-    size_t remaining = AUDIO_BUFFER_SAMPLES - samplesRecorded;
-    size_t toRecord = (remaining < SAMPLES_PER_CHUNK) ? remaining : SAMPLES_PER_CHUNK;
-
-    // Record a chunk
-    if (M5.Mic.record(tempBuffer, toRecord, AUDIO_SAMPLE_RATE)) {
-        // Copy to WAV buffer
-        int16_t* audioData = (int16_t*)(wavBuffer + WAV_HEADER_SIZE);
-        memcpy(&audioData[samplesRecorded], tempBuffer, toRecord * sizeof(int16_t));
-        samplesRecorded += toRecord;
-    }
-
-    // Compute peak amplitude from this chunk
+    // Compute audio level from current buffer (for visualizer)
     int16_t peak = 0;
-    for (size_t i = 0; i < toRecord; i++) {
-        int16_t val = tempBuffer[i] < 0 ? -tempBuffer[i] : tempBuffer[i];
-        if (val > peak) peak = val;
+    uint8_t level = 0;
+
+    if (!M5.Mic.isRecording()) {
+        // Half-buffer DMA complete — swap buffers immediately to minimize gap
+        int16_t* completedBuf = recBuf;
+        int16_t* bufA = chunkBuffer;
+        int16_t* bufB = chunkBuffer + HALF_SAMPLES;
+        recBuf = (completedBuf == bufA) ? bufB : bufA;
+
+        // Start DMA on the other half right away (continuous recording)
+        if (halvesCompleted + 1 < TOTAL_HALVES) {
+            M5.Mic.record(recBuf, HALF_SAMPLES, AUDIO_SAMPLE_RATE);
+            chunkStartTime = millis();
+        }
+
+        // Compute level from the completed half
+        for (size_t i = (HALF_SAMPLES > LEVEL_WINDOW ? HALF_SAMPLES - LEVEL_WINDOW : 0);
+             i < HALF_SAMPLES; i++) {
+            int16_t val = completedBuf[i] < 0 ? -completedBuf[i] : completedBuf[i];
+            if (val > peak) peak = val;
+        }
+        level = (uint8_t)((peak * 255L) / 32767);
+
+        // Write completed half to flash (blocking ~20-50ms, but DMA runs in parallel)
+        wavFile.write((uint8_t*)completedBuf, HALF_SIZE);
+        totalSamplesWritten += HALF_SAMPLES;
+        halvesCompleted++;
+
+        Serial.printf("[AUDIO] Half %d/%d written\n", halvesCompleted, TOTAL_HALVES);
+
+        samplesRecorded = totalSamplesWritten;
+
+        if (halvesCompleted >= TOTAL_HALVES) {
+            // All halves done — finalize WAV
+            M5.Mic.end();
+            size_t actualDataSize = totalSamplesWritten * sizeof(int16_t);
+            writeWavHeader(actualDataSize);
+            wavFileSize = WAV_HEADER_SIZE + actualDataSize;
+            wavFile.close();
+            Serial.printf("[AUDIO] Recording complete: %u samples, WAV file %u bytes\n",
+                          (unsigned)totalSamplesWritten, (unsigned)wavFileSize);
+            currentAudioState = AUDIO_COMPLETE;
+            return;
+        }
+
+    } else {
+        // DMA in progress — estimate progress within current half from elapsed time
+        unsigned long chunkElapsed = millis() - chunkStartTime;
+        size_t chunkProgress = (size_t)(chunkElapsed * AUDIO_SAMPLE_RATE / 1000);
+        if (chunkProgress > HALF_SAMPLES) chunkProgress = HALF_SAMPLES;
+        samplesRecorded = totalSamplesWritten + chunkProgress;
+
+        // Read audio level from in-progress buffer
+        if (chunkProgress > 0) {
+            size_t start = (chunkProgress > LEVEL_WINDOW) ? chunkProgress - LEVEL_WINDOW : 0;
+            for (size_t i = start; i < chunkProgress; i++) {
+                int16_t val = recBuf[i] < 0 ? -recBuf[i] : recBuf[i];
+                if (val > peak) peak = val;
+            }
+            level = (uint8_t)((peak * 255L) / 32767);
+        }
     }
-    // Normalize to 0-255 range (int16 max is 32767)
-    uint8_t level = (uint8_t)((peak * 255L) / 32767);
 
     // Update blinking state
     unsigned long now = millis();
@@ -214,7 +262,7 @@ void audioUpdate() {
 
     // Calculate what changed
     bool dotChanged = (recDotVisible != lastRecDotState);
-    int seconds = (AUDIO_BUFFER_SAMPLES - samplesRecorded) / AUDIO_SAMPLE_RATE;
+    int seconds = (AUDIO_TOTAL_SAMPLES - samplesRecorded) / AUDIO_SAMPLE_RATE;
     if (seconds < 0) seconds = 0;
     if (seconds > AUDIO_DURATION_SEC) seconds = AUDIO_DURATION_SEC;
     bool secondsChanged = (seconds != lastSecondsDisplayed);
@@ -245,36 +293,38 @@ AudioState getAudioState() {
     return currentAudioState;
 }
 
-uint8_t* getWavBuffer() {
-    return wavBuffer;
+size_t getWavFileSize() {
+    return wavFileSize;
 }
 
-size_t getWavBufferSize() {
-    return wavBufferSize;
+const char* getWavFilePath() {
+    return WAV_FILE_PATH;
 }
 
 void audioStopRecording() {
     if (currentAudioState != AUDIO_RECORDING) return;
     M5.Mic.end();
 
-    // Rewrite WAV header with actual recorded size
-    uint32_t dataSize = samplesRecorded * sizeof(int16_t);
-    uint32_t fileSize = dataSize + WAV_HEADER_SIZE - 8;
+    // Estimate partial samples in the active half-buffer from elapsed time
+    unsigned long chunkElapsed = millis() - chunkStartTime;
+    size_t partialSamples = (size_t)(chunkElapsed * AUDIO_SAMPLE_RATE / 1000);
+    if (partialSamples > HALF_SAMPLES) partialSamples = HALF_SAMPLES;
 
-    // RIFF chunk size (offset 4)
-    wavBuffer[4] = (fileSize >> 0) & 0xFF;
-    wavBuffer[5] = (fileSize >> 8) & 0xFF;
-    wavBuffer[6] = (fileSize >> 16) & 0xFF;
-    wavBuffer[7] = (fileSize >> 24) & 0xFF;
+    // Write partial half-buffer to flash
+    if (partialSamples > 0) {
+        size_t partialBytes = partialSamples * sizeof(int16_t);
+        wavFile.write((uint8_t*)recBuf, partialBytes);
+        totalSamplesWritten += partialSamples;
+    }
 
-    // data chunk size (offset 40)
-    wavBuffer[40] = (dataSize >> 0) & 0xFF;
-    wavBuffer[41] = (dataSize >> 8) & 0xFF;
-    wavBuffer[42] = (dataSize >> 16) & 0xFF;
-    wavBuffer[43] = (dataSize >> 24) & 0xFF;
+    // Rewrite WAV header with actual total size
+    size_t actualDataSize = totalSamplesWritten * sizeof(int16_t);
+    writeWavHeader(actualDataSize);
+    wavFileSize = WAV_HEADER_SIZE + actualDataSize;
+    wavFile.close();
 
-    // Update buffer size to actual payload
-    wavBufferSize = WAV_HEADER_SIZE + dataSize;
+    Serial.printf("[AUDIO] Early stop: %u samples, WAV file %u bytes\n",
+                  (unsigned)totalSamplesWritten, (unsigned)wavFileSize);
 
     currentAudioState = AUDIO_COMPLETE;
 }
@@ -283,36 +333,34 @@ void audioReset() {
     if (currentAudioState == AUDIO_RECORDING) {
         M5.Mic.end();
     }
+    if (wavFile) {
+        wavFile.close();
+    }
+    totalSamplesWritten = 0;
+    halvesCompleted = 0;
     samplesRecorded = 0;
+    wavFileSize = 0;
+    recBuf = nullptr;
+    writeBuf = nullptr;
     recDotVisible = true;
     currentAudioState = AUDIO_IDLE;
 }
 
 void audioFreeBuffer() {
-    if (wavBuffer != nullptr) {
-        heap_caps_free(wavBuffer);
-        wavBuffer = nullptr;
-        wavBufferSize = 0;
+    if (chunkBuffer != nullptr) {
+        heap_caps_free(chunkBuffer);
+        chunkBuffer = nullptr;
     }
-}
-
-bool audioAllocBuffer() {
-    if (wavBuffer != nullptr) return true;  // already allocated
-    wavBufferSize = WAV_HEADER_SIZE + (AUDIO_BUFFER_SAMPLES * sizeof(int16_t));
-    wavBuffer = (uint8_t*)heap_caps_malloc(wavBufferSize, MALLOC_CAP_8BIT);
-    if (wavBuffer == nullptr) {
-        wavBufferSize = 0;
-        return false;
+    if (wavFile) {
+        wavFile.close();
     }
-    memset(wavBuffer, 0, wavBufferSize);
-    return true;
 }
 
 float getRecordingProgress() {
     if (currentAudioState != AUDIO_RECORDING) {
         return 0.0f;
     }
-    return (float)samplesRecorded / (float)AUDIO_BUFFER_SAMPLES;
+    return (float)samplesRecorded / (float)AUDIO_TOTAL_SAMPLES;
 }
 
 // Initial full screen draw - called once when recording starts
@@ -323,20 +371,18 @@ static void drawRecordingScreenInitial() {
     M5.Display.fillCircle(15, 12, 6, TFT_RED);
     M5.Display.setTextColor(TFT_RED);
     M5.Display.setFont(FONT_SMALL);
-    M5.Display.setCursor(25, 8);
+    M5.Display.setCursor(25, 5);
     M5.Display.print("REC");
     lastRecDotState = true;
 
     // Bar area is left empty on initial draw (all zeros, just black)
 
-    // Initial seconds display
-    int secondsRemaining = (AUDIO_BUFFER_SAMPLES - samplesRecorded) / AUDIO_SAMPLE_RATE;
-    if (secondsRemaining < 0) secondsRemaining = 0;
-    if (secondsRemaining > AUDIO_DURATION_SEC) secondsRemaining = AUDIO_DURATION_SEC;
+    // Initial seconds display (top-right, aligned with REC row)
+    int secondsRemaining = AUDIO_DURATION_SEC;
 
     M5.Display.setTextColor(TFT_YELLOW);
-    M5.Display.setFont(FONT_MEDIUM);
-    M5.Display.setCursor(90, 108);
+    M5.Display.setFont(FONT_SMALL);
+    M5.Display.setCursor(220, 5);
     M5.Display.print(secondsRemaining);
     M5.Display.print("s");
     lastSecondsDisplayed = secondsRemaining;
@@ -351,8 +397,8 @@ static void drawRecordingScreenInitial() {
 // Partial screen update - only redraws changed elements (prevents flickering)
 static void updateRecordingScreen(bool updateDot, bool updateSeconds, bool updateBars) {
     if (updateDot) {
-        // Clear just the dot area (small rectangle around the circle)
-        M5.Display.fillRect(9, 6, 14, 14, TFT_BLACK);
+        // Clear dot + REC text area
+        M5.Display.fillRect(9, 5, 42, 14, TFT_BLACK);
 
         if (recDotVisible) {
             M5.Display.fillCircle(15, 12, 6, TFT_RED);
@@ -362,7 +408,7 @@ static void updateRecordingScreen(bool updateDot, bool updateSeconds, bool updat
         }
         // Redraw "REC" text with updated color
         M5.Display.setFont(FONT_SMALL);
-        M5.Display.setCursor(25, 8);
+        M5.Display.setCursor(25, 5);
         M5.Display.print("REC");
 
         lastRecDotState = recDotVisible;
@@ -382,16 +428,16 @@ static void updateRecordingScreen(bool updateDot, bool updateSeconds, bool updat
     }
 
     if (updateSeconds) {
-        // Clear just the seconds area (enough space for "6s" in DejaVu18)
-        M5.Display.fillRect(90, 108, 50, 18, TFT_BLACK);
+        // Clear just the seconds area (top-right corner)
+        M5.Display.fillRect(215, 4, 25, 14, TFT_BLACK);
 
-        int seconds = (AUDIO_BUFFER_SAMPLES - samplesRecorded) / AUDIO_SAMPLE_RATE;
+        int seconds = (AUDIO_TOTAL_SAMPLES - samplesRecorded) / AUDIO_SAMPLE_RATE;
         if (seconds < 0) seconds = 0;
         if (seconds > AUDIO_DURATION_SEC) seconds = AUDIO_DURATION_SEC;
 
         M5.Display.setTextColor(TFT_YELLOW);
-        M5.Display.setFont(FONT_MEDIUM);
-        M5.Display.setCursor(90, 108);
+        M5.Display.setFont(FONT_SMALL);
+        M5.Display.setCursor(220, 5);
         M5.Display.print(seconds);
         M5.Display.print("s");
 

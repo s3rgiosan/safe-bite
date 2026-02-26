@@ -33,6 +33,7 @@ void wifiInit();
 void wifiUpdate();
 bool isOnline();
 void wifiDisable();
+void wifiReconnect();
 void drawWifiIndicator();
 
 // State accessors

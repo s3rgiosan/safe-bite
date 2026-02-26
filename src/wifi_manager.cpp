@@ -131,6 +131,16 @@ void wifiDisable() {
     }
 }
 
+void wifiReconnect() {
+#ifdef HAS_WIFI_CONFIG
+    if (connectionMode == MODE_ONLINE) {
+        WiFi.mode(WIFI_STA);
+        WiFi.onEvent(onWifiEvent);
+        startConnection();
+    }
+#endif
+}
+
 WifiState getWifiState() {
     return currentWifiState;
 }
