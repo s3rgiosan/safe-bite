@@ -126,6 +126,7 @@ I'm documenting the build process:
 
 1. [Building Safe Bite: Why I'm Making This](https://s3rgiosan.com/building-safe-bite-why-im-making-this) — The personal story behind this project
 2. [Building Safe Bite: Offline Mode](https://s3rgiosan.com/building-safe-bite-offline-mode/) — Local database and menu navigation
+3. [Building Safe Bite: WiFi and Voice Search](https://s3rgiosan.com/building-safe-bite-wifi-and-voice-search/) — Non-blocking WiFi and voice recording
 
 ## Acknowledgments
 
