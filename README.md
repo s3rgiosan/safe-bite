@@ -2,6 +2,8 @@
 
 A portable voice-activated dietary assistant for people with FODMAP and gluten restrictions.
 
+![Safe Bite](assets/safe-bite.webp)
+
 ## What is this?
 
 Safe Bite is a pocket-sized device that helps people make safe food choices. They ask "Can I eat apples?" and instantly see:
